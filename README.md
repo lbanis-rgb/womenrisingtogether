@@ -1,9 +1,9 @@
-# Next.js App Router page
+# Simple login page
 
 *Automatically synced with your [v0.app](https://v0.app) deployments*
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/robert-6270s-projects/v0-actionera-academy)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/oH7tExXxyQQ)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/robert-6270s-projects/v0-mrr-platform-template-to)
+[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/pAAVZ4yxD1w)
 
 ## Overview
 
@@ -14,13 +14,13 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 Your project is live at:
 
-**[https://vercel.com/robert-6270s-projects/v0-actionera-academy](https://vercel.com/robert-6270s-projects/v0-actionera-academy)**
+**[https://vercel.com/robert-6270s-projects/v0-mrr-platform-template-to](https://vercel.com/robert-6270s-projects/v0-mrr-platform-template-to)**
 
 ## Build your app
 
 Continue building your app on:
 
-**[https://v0.app/chat/oH7tExXxyQQ](https://v0.app/chat/oH7tExXxyQQ)**
+**[https://v0.app/chat/pAAVZ4yxD1w](https://v0.app/chat/pAAVZ4yxD1w)**
 
 ## How It Works
 

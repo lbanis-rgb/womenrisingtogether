@@ -1,32 +1,53 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import './globals.css'
+import type React from "react"
+import type { Metadata } from "next"
+import { Geist, Geist_Mono } from "next/font/google"
+import { Analytics } from "@vercel/analytics/next"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+import AuthProvider from "@/components/AuthProvider"
+import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _geist = Geist({ subsets: ["latin"] })
+const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
-export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies()
+
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: () => {},
+    },
+  })
+
+  const { data: settings } = await supabase
+    .from("site_settings")
+    .select("site_title, meta_description, favicon_url, social_image_url")
+    .single()
+
+  const title = settings?.site_title ?? "Community Platform"
+  const description = settings?.meta_description ?? "Welcome to our community"
+  const favicon = settings?.favicon_url ?? "/favicon.ico"
+  const socialImage = settings?.social_image_url ?? undefined
+
+  return {
+    title,
+    description,
+    icons: {
+      icon: favicon,
+    },
+    openGraph: {
+      title,
+      description,
+      images: socialImage ? [{ url: socialImage }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: socialImage ? [socialImage] : [],
+    },
+  }
 }
 
 export default function RootLayout({
@@ -36,8 +57,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
-        {children}
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+      </head>
+      <body className="bg-gray-50 font-[Inter] antialiased">
+        <AuthProvider>{children}</AuthProvider>
         <Analytics />
       </body>
     </html>
