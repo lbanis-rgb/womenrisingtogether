@@ -159,7 +159,6 @@ export default function LoginPage() {
 
           <div>
             <h1 className="text-2xl font-semibold text-[#0a1428]">Welcome back</h1>
-            <p className="mt-1 text-sm text-slate-600">Log in to access your members area and test the JV tools.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-3" noValidate>
@@ -213,18 +212,11 @@ export default function LoginPage() {
               {isSubmitting ? "Signing in…" : "Sign In"}
             </button>
 
-            <div className="mt-3 flex flex-col gap-2 text-center text-sm">
-              <p className="text-slate-600">
-                Don't have an account?{" "}
-                <Link href="/register" className="font-medium text-[#2f91cf] hover:underline">
-                  Create one
-                </Link>
-              </p>
+            <div className="mt-3 text-center text-sm">
               <p>
                 <Link href="/forgot-password" className="text-slate-600 hover:text-[#2f91cf] hover:underline">
-  Forgot password?
-</Link>
-
+                  Forgot password?
+                </Link>
               </p>
             </div>
           </form>
