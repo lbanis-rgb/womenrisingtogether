@@ -6,7 +6,10 @@ export const shellConfig: { brand: string; nav: ShellSection[] } = {
   nav: [
     {
       title: "Overview",
-      items: [{ label: "Dashboard", href: "/admin/dashboard", icon: "dashboard" }],
+      items: [
+        { label: "Return to Site", href: "/members/dashboard", icon: "dashboard" },
+        { label: "Dashboard", href: "/admin/dashboard", icon: "dashboard" },
+      ],
     },
     {
       title: "Management",
