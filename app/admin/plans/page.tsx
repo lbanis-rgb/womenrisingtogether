@@ -70,7 +70,6 @@ export default function AdminPlansPage() {
   const [currency, setCurrency] = useState("USD")
   const [billing, setBilling] = useState("Monthly")
   const [paymentUrl, setPaymentUrl] = useState("")
-  const [returnUrl, setReturnUrl] = useState("")
   const [features, setFeatures] = useState([""])
   const [mostPopular, setMostPopular] = useState(false)
   const [active, setActive] = useState(true)
@@ -206,7 +205,6 @@ export default function AdminPlansPage() {
     setCurrency("USD")
     setBilling("Monthly")
     setPaymentUrl("")
-    setReturnUrl("")
     setFeatures([""])
     setMostPopular(false)
     setActive(true)
@@ -283,7 +281,6 @@ export default function AdminPlansPage() {
       active: true,
       sort_order: nextSortOrder,
       payment_url: paymentUrl,
-      return_url: returnUrl,
     }
 
     const result = await createPlanAction(payload)
@@ -318,7 +315,6 @@ export default function AdminPlansPage() {
     setCurrency(plan.currency)
     setBilling(plan.billing)
     setPaymentUrl(plan.payment_url || "")
-    setReturnUrl(plan.return_url || "")
     setFeatures(plan.features.length > 0 ? plan.features : [""])
     setMostPopular(plan.most_popular)
     setActive(plan.active)
@@ -351,7 +347,6 @@ export default function AdminPlansPage() {
       active,
       sort_order: editingPlan.sort_order,
       payment_url: paymentUrl,
-      return_url: returnUrl,
     })
 
     setIsSubmitting(false)
@@ -581,7 +576,7 @@ export default function AdminPlansPage() {
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500">{plan.description}</div>
+                          <div className="text-sm text-gray-500 whitespace-normal break-words">{plan.description}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-semibold">
@@ -591,7 +586,7 @@ export default function AdminPlansPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {siteDomain ? (
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-gray-600">pid: {plan.id.substring(0, 6)}…</span>
+                            <span className="text-xs text-gray-600">Copy URL</span>
                             <button
                               onClick={() => copyRedirectUrl(plan.id)}
                               className="text-gray-400 hover:text-gray-600 transition-colors p-1"
@@ -837,19 +832,6 @@ export default function AdminPlansPage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
-                    <div>
-                      <label htmlFor="returnUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                        Return URL (optional)
-                      </label>
-                      <input
-                        type="url"
-                        id="returnUrl"
-                        value={returnUrl}
-                        onChange={(e) => setReturnUrl(e.target.value)}
-                        placeholder="https://yoursite.com/thank-you"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
                   </div>
                 </div>
               )}
@@ -1091,19 +1073,6 @@ export default function AdminPlansPage() {
                         value={paymentUrl}
                         onChange={(e) => setPaymentUrl(e.target.value)}
                         placeholder="https://checkout.example.com/..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="editReturnUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                        Return URL (optional)
-                      </label>
-                      <input
-                        type="url"
-                        id="editReturnUrl"
-                        value={returnUrl}
-                        onChange={(e) => setReturnUrl(e.target.value)}
-                        placeholder="https://yoursite.com/thank-you"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
