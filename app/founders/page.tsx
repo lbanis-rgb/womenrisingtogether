@@ -1,4 +1,43 @@
-export default function FoundersPage() {
+import { createClient } from "@/lib/supabase/server"
+
+type FoundersRow = {
+  founders_spots_available: number | null
+  founders_invite_headline: string | null
+  founders_invite_body: string | null
+  founders_invite_media_url: string | null
+  founders_invite_media_type: "image" | "video" | null
+  founders_comparison_headline: string | null
+  founders_comparison_subhead: string | null
+  founders_price_lifetime: number | null
+  founders_price_comparison_monthly: number | null
+  founders_claim_headline: string | null
+  founders_claim_body: string | null
+  founders_faq: { question: string; answer: string }[] | null
+}
+
+export default async function FoundersPage() {
+  const supabase = await createClient()
+  const { data: row, error } = await supabase
+    .from("public_sales_pages")
+    .select("*")
+    .eq("slug", "founders")
+    .single()
+
+  if (error || !row) {
+    return (
+      <div className="font-sans bg-white min-h-[50vh] flex items-center justify-center px-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Founders</h1>
+          <p className="text-gray-600">This page is not available yet.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const founders = row as FoundersRow
+  const spots = founders.founders_spots_available ?? null
+  const spotsLabel = spots != null ? String(spots) : "—"
+
   return (
     <div className="font-sans bg-white">
       {/* Brand Logo Section */}
@@ -68,10 +107,12 @@ export default function FoundersPage() {
                   <div className="mt-1">
                     <i className="fa-solid fa-circle-check text-brand-500 text-xl"></i>
                   </div>
-                  <span className="text-gray-700 font-medium">Limited to X Founding Leader spots</span>
+                  <span className="text-gray-700 font-medium">Limited to {spotsLabel} Founding Leader spots</span>
                 </div>
               </div>
-              <p className="text-sm text-gray-500 italic">Available until 25 spots are filled.</p>
+              <p className="text-sm text-gray-500 italic">
+                {spots != null ? `Available until ${spots} spots are filled.` : "Available until spots are filled."}
+              </p>
             </div>
             <div className="relative">
               <div className="bg-gradient-to-br from-brand-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden aspect-video flex items-center justify-center border border-gray-200">
@@ -87,7 +128,7 @@ export default function FoundersPage() {
                     <i className="fa-solid fa-users text-brand-600 text-xl"></i>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">25</p>
+                    <p className="text-2xl font-bold text-gray-900">{spotsLabel}</p>
                     <p className="text-sm text-gray-600">Spots Available</p>
                   </div>
                 </div>
@@ -819,24 +860,39 @@ export default function FoundersPage() {
               Exclusive Opportunity
             </span>
           </div>
-          <h2 className="text-4xl lg:text-6xl font-bold mb-6">We're Opening a Limited Number of Founding Leader Spots</h2>
-          <p className="text-xl lg:text-2xl mb-8 leading-relaxed opacity-95">
-            Founding Leaders are the visible guides and creators inside this ecosystem. They help shape the culture,
-            lead experiences, and contribute expertise — while receiving lifetime access and full creation permissions.
-          </p>
+          {(founders.founders_invite_headline ?? "").trim() !== "" && (
+            <h2 className="text-4xl lg:text-6xl font-bold mb-6">{founders.founders_invite_headline}</h2>
+          )}
+          {(founders.founders_invite_body ?? "").trim() !== "" && (
+            <p className="text-xl lg:text-2xl mb-8 leading-relaxed opacity-95 whitespace-pre-wrap">
+              {founders.founders_invite_body}
+            </p>
+          )}
           <div className="inline-block bg-white/10 backdrop-blur-sm border-2 border-white/30 rounded-2xl px-8 py-4 mb-12">
             <p className="text-2xl font-bold">
               <i className="fa-solid fa-hourglass-half mr-3"></i>
-              Limited to X Founding Leaders — available until filled.
+              Limited to {spotsLabel} Founding Leaders — available until filled.
             </p>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden aspect-video flex items-center justify-center border border-white/20">
-            <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/actioneraacademy-homeimage-DgutaZ1nXlS7xc5Bz9MlXrvzPPwqJa.jpg"
-              alt="Actionera Academy logo with dark blue gradient background and elegant curved lines"
-              className="w-full h-full object-cover"
-            />
-          </div>
+          {(founders.founders_invite_media_url ?? "").trim() !== "" && (
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden aspect-video flex items-center justify-center border border-white/20">
+              {founders.founders_invite_media_type === "video" ? (
+                <iframe
+                  src={founders.founders_invite_media_url ?? ""}
+                  title="Founders invite media"
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <img
+                  src={founders.founders_invite_media_url ?? ""}
+                  alt="Founders invite media"
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -844,10 +900,14 @@ export default function FoundersPage() {
       <section id="everything-included" className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Founding Leader vs Top-Level Member</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              See exactly what makes the Founding Leader lifetime deal the ultimate value
-            </p>
+            {(founders.founders_comparison_headline ?? "").trim() !== "" && (
+              <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{founders.founders_comparison_headline}</h2>
+            )}
+            {(founders.founders_comparison_subhead ?? "").trim() !== "" && (
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                {founders.founders_comparison_subhead}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-3xl shadow-2xl p-10 border-2 border-brand-200 transform lg:scale-105">
@@ -898,7 +958,9 @@ export default function FoundersPage() {
                 </div>
               </div>
               <div className="bg-white rounded-xl p-6 text-center">
-                <p className="text-4xl font-bold text-gray-900 mb-2">$997</p>
+                <p className="text-4xl font-bold text-gray-900 mb-2">
+                  {founders.founders_price_lifetime != null ? `$${founders.founders_price_lifetime}` : "—"}
+                </p>
                 <p className="text-gray-600 font-medium">One-time payment • Lifetime value</p>
               </div>
             </div>
@@ -946,7 +1008,9 @@ export default function FoundersPage() {
                 </div>
               </div>
               <div className="bg-gray-50 rounded-xl p-6 text-center border border-gray-200">
-                <p className="text-4xl font-bold text-gray-900 mb-2">$99+</p>
+                <p className="text-4xl font-bold text-gray-900 mb-2">
+                  {founders.founders_price_comparison_monthly != null ? `$${founders.founders_price_comparison_monthly}` : "—"}
+                </p>
                 <p className="text-gray-600 font-medium">Per month • Ongoing cost</p>
               </div>
             </div>
@@ -961,14 +1025,18 @@ export default function FoundersPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Pricing / Claim Section */}
       <section id="pricing" className="py-24 px-6 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Claim Your Founding Leader Lifetime Access
-            </h2>
-            <p className="text-xl text-gray-600">Join the inner circle and unlock everything — for life</p>
+            {(founders.founders_claim_headline ?? "").trim() !== "" && (
+              <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+                {founders.founders_claim_headline}
+              </h2>
+            )}
+            {(founders.founders_claim_body ?? "").trim() !== "" && (
+              <p className="text-xl text-gray-600 whitespace-pre-wrap">{founders.founders_claim_body}</p>
+            )}
           </div>
           <div className="bg-white rounded-3xl shadow-2xl p-12 border-2 border-brand-200">
             <div className="text-center mb-8">
@@ -977,7 +1045,9 @@ export default function FoundersPage() {
                 Founding Leader Lifetime Deal
               </div>
               <div className="mb-6">
-                <p className="text-6xl font-bold text-gray-900 mb-2">$997</p>
+                <p className="text-6xl font-bold text-gray-900 mb-2">
+                  {founders.founders_price_lifetime != null ? `$${founders.founders_price_lifetime}` : "$997"}
+                </p>
                 <p className="text-xl text-gray-600">Lifetime Access</p>
               </div>
               <div className="text-gray-600 mb-8">
@@ -1018,7 +1088,9 @@ export default function FoundersPage() {
               >
                 Claim a Founding Leader Spot
               </a>
-              <p className="text-sm text-gray-500 italic mt-4">Available until X spots are filled.</p>
+              <p className="text-sm text-gray-500 italic mt-4">
+                {spots != null ? `Available until ${spots} spots are filled.` : "Available until spots are filled."}
+              </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
               <p className="text-gray-700 text-center">
@@ -1031,80 +1103,31 @@ export default function FoundersPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-24 px-6 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-            <p className="text-xl text-gray-600">Everything you need to know about becoming a Founding Leader</p>
-          </div>
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">What is a Founding Leader?</h3>
-              <p className="text-gray-700 leading-relaxed">
-                A Founding Leader is a lifetime member with full creator permissions and the ability to contribute
-                expertise through groups, events, content, courses, offers, and AI Mentors.
-              </p>
+      {Array.isArray(founders.founders_faq) && founders.founders_faq.length > 0 && (
+        <section id="faq" className="py-24 px-6 bg-white">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+              <p className="text-xl text-gray-600">Everything you need to know about becoming a Founding Leader</p>
             </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Is this available later?</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Founding Leader spots are limited to X and available until filled. Once filled, new leaders can join
-                through monthly membership options with fewer features and benefits.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                What makes this different from a regular membership?
-              </h3>
-              <p className="text-gray-700 leading-relaxed">
-                Founding Leaders receive lifetime access with full creation capabilities, maximum visibility, and the
-                ability to monetize their expertise through multiple channels. Regular members have access to content
-                and community but limited creation permissions and visibility.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Can I create and sell my own courses?</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Yes! Founding Leaders can create both free lead generation courses and paid premium courses. You keep
-                the revenue from your paid courses while building your authority and audience within the community.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">How do AI Mentors work?</h3>
-              <p className="text-gray-700 leading-relaxed">
-                AI Mentors are focused chat experiences you can create based on your expertise. Members interact with
-                your mentor to receive personalized guidance 24/7, allowing you to scale your impact without 1:1 time
-                commitments.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                What if I'm not ready to create content right away?
-              </h3>
-              <p className="text-gray-700 leading-relaxed">
-                That's perfectly fine! Your Founding Leader access is lifetime, so you can start by participating in
-                the community and create content when you're ready. There's no pressure or timeline.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                Can I promote my existing services and programs?
-              </h3>
-              <p className="text-gray-700 leading-relaxed">
-                Absolutely! Founding Leaders can feature their coaching, services, programs, and other offers in the
-                community marketplace. This gives you visibility with a warm, aligned audience without feeling salesy.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Is there a payment plan available?</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Yes! You can pay $997 one-time or split it into 3 payments of $397. Both options give you immediate
-                lifetime access to all Founding Leader features.
-              </p>
+            <div className="space-y-6">
+              {founders.founders_faq.map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg p-8 border border-gray-100"
+                >
+                  {(item?.question ?? "").trim() !== "" && (
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">{item.question}</h3>
+                  )}
+                  {(item?.answer ?? "").trim() !== "" && (
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{item.answer}</p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Final CTA Section */}
       <section id="final-cta" className="py-24 px-6 bg-gradient-to-br from-brand-600 to-brand-800 text-white">
@@ -1117,11 +1140,13 @@ export default function FoundersPage() {
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-12 border border-white/20">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div>
-                <div className="text-5xl font-bold mb-2">$997</div>
+                <div className="text-5xl font-bold mb-2">
+                  {founders.founders_price_lifetime != null ? `$${founders.founders_price_lifetime}` : "$997"}
+                </div>
                 <p className="text-white/90">One-time lifetime investment</p>
               </div>
               <div>
-                <div className="text-5xl font-bold mb-2">X</div>
+                <div className="text-5xl font-bold mb-2">{spotsLabel}</div>
                 <p className="text-white/90">Limited spots available</p>
               </div>
               <div>
@@ -1139,7 +1164,9 @@ export default function FoundersPage() {
             </a>
             <p className="text-white/80">
               <i className="fa-solid fa-clock mr-2"></i>
-              Available until X spots are filled — don't miss this opportunity
+              {spots != null
+                ? `Available until ${spots} spots are filled — don't miss this opportunity`
+                : "Available until spots are filled — don't miss this opportunity"}
             </p>
           </div>
         </div>
