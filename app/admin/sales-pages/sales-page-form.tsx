@@ -14,6 +14,14 @@ import {
   type ActivePlanForSalesPage,
   type SalesPageRow,
 } from "./sales-page-actions"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 const SECTION_HEADERS: Record<"main" | "founders", string> = {
   main: "Main Sales Page Settings",
@@ -49,6 +57,7 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
   const [isUploadingCommunityVisionImage, setIsUploadingCommunityVisionImage] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   const logoInputRef = useRef<HTMLInputElement>(null)
   const heroImageInputRef = useRef<HTMLInputElement>(null)
@@ -294,7 +303,33 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">{SECTION_HEADERS[pageType]}</h2>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900">{SECTION_HEADERS[pageType]}</h2>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setIsPreviewOpen(true)}
+        >
+          View Page
+        </Button>
+      </div>
+
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent
+          className="max-w-[95vw] w-full max-h-[95vh] overflow-y-auto flex flex-col"
+          showCloseButton={true}
+        >
+          <DialogHeader>
+            <DialogTitle>Sales Page Preview</DialogTitle>
+            <DialogDescription>
+              This modal will render the live / page preview.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 p-8 text-center text-gray-500 min-h-[200px] flex items-center justify-center">
+            <p className="text-sm">Preview placeholder — live sales page content will appear here.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Hero Section */}
       <section className="space-y-6">
