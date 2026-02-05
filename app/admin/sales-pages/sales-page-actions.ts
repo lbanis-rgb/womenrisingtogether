@@ -48,22 +48,21 @@ async function verifyAdminAccess(): Promise<{ authorized: boolean; error: string
 }
 
 export interface SalesPageHeroRow {
-  hero_logo_url: string | null
+  logo_url: string | null
   hero_headline: string | null
-  hero_intro_text: string | null
+  hero_intro: string | null
   hero_image_url: string | null
 }
 
 export interface SalesPageRow extends SalesPageHeroRow {
-  community_vision_headline: string | null
-  community_vision_image_url: string | null
-  community_vision_body: string | null
-  community_vision_bullets: string[] | null
-  education_section_headline: string | null
-  show_courses_section: boolean | null
-  show_marketplace_section: boolean | null
-  show_ai_mentors_section: boolean | null
-  show_founders_cta_section: boolean | null
+  vision_headline: string | null
+  vision_image_url: string | null
+  vision_who_for_bullets: string[] | null
+  education_headline: string | null
+  show_courses: boolean | null
+  show_marketplace: boolean | null
+  show_ai_mentors: boolean | null
+  show_founders_bridge: boolean | null
   selected_plan_ids: string[] | null
 }
 
@@ -80,7 +79,7 @@ export async function getSalesPageByPageType(
   const { data, error } = await supabase
     .from("public_sales_pages")
     .select(
-      "hero_logo_url, hero_headline, hero_intro_text, hero_image_url, community_vision_headline, community_vision_image_url, community_vision_body, community_vision_bullets, education_section_headline, show_courses_section, show_marketplace_section, show_ai_mentors_section, show_founders_cta_section, selected_plan_ids",
+      "logo_url, hero_headline, hero_intro, hero_image_url, vision_headline, vision_image_url, vision_who_for_bullets, education_headline, show_courses, show_marketplace, show_ai_mentors, show_founders_bridge, selected_plan_ids",
     )
     .eq("page_type", pageType)
     .maybeSingle()
