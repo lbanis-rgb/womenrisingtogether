@@ -5,11 +5,14 @@ import { useState, useEffect, useRef } from "react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import {
   getSalesPageByPageType,
+  getActivePlansForSalesPage,
   updateSalesPageHero,
   updateSalesPageCommunityVision,
   updateSalesPageEducationSection,
   updateSalesPageVisibility,
+  updateSalesPagePlans,
   type SalesPageType,
+  type ActivePlanForSalesPage,
 } from "./sales-page-actions"
 
 const SECTION_HEADERS: Record<"main" | "founders", string> = {
@@ -34,11 +37,14 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const [showMarketplaceSection, setShowMarketplaceSection] = useState(true)
   const [showAiMentorsSection, setShowAiMentorsSection] = useState(true)
   const [showFoundersCtaSection, setShowFoundersCtaSection] = useState(true)
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([])
+  const [activePlans, setActivePlans] = useState<ActivePlanForSalesPage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isSavingCommunityVision, setIsSavingCommunityVision] = useState(false)
   const [isSavingEducationSection, setIsSavingEducationSection] = useState(false)
   const [isSavingVisibility, setIsSavingVisibility] = useState(false)
+  const [isSavingPlans, setIsSavingPlans] = useState(false)
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
   const [isUploadingCommunityVisionImage, setIsUploadingCommunityVisionImage] = useState(false)
@@ -51,23 +57,30 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   useEffect(() => {
     async function load() {
       setIsLoading(true)
-      const result = await getSalesPageByPageType(pageType)
-      if (result.success && result.data) {
-        setHeroLogoUrl(result.data.hero_logo_url ?? "")
-        setHeroHeadline(result.data.hero_headline ?? "")
-        setHeroIntroText(result.data.hero_intro_text ?? "")
-        setHeroImageUrl(result.data.hero_image_url ?? "")
-        setCommunityVisionHeadline(result.data.community_vision_headline ?? "")
-        setCommunityVisionImageUrl(result.data.community_vision_image_url ?? "")
-        setCommunityVisionBody(result.data.community_vision_body ?? "")
+      const [pageResult, plansResult] = await Promise.all([
+        getSalesPageByPageType(pageType),
+        getActivePlansForSalesPage(),
+      ])
+      if (pageResult.success && pageResult.data) {
+        setHeroLogoUrl(pageResult.data.hero_logo_url ?? "")
+        setHeroHeadline(pageResult.data.hero_headline ?? "")
+        setHeroIntroText(pageResult.data.hero_intro_text ?? "")
+        setHeroImageUrl(pageResult.data.hero_image_url ?? "")
+        setCommunityVisionHeadline(pageResult.data.community_vision_headline ?? "")
+        setCommunityVisionImageUrl(pageResult.data.community_vision_image_url ?? "")
+        setCommunityVisionBody(pageResult.data.community_vision_body ?? "")
         setCommunityVisionBullets(
-          Array.isArray(result.data.community_vision_bullets) ? result.data.community_vision_bullets : [],
+          Array.isArray(pageResult.data.community_vision_bullets) ? pageResult.data.community_vision_bullets : [],
         )
-        setEducationSectionHeadline(result.data.education_section_headline ?? "")
-        setShowCoursesSection(result.data.show_courses_section ?? true)
-        setShowMarketplaceSection(result.data.show_marketplace_section ?? true)
-        setShowAiMentorsSection(result.data.show_ai_mentors_section ?? true)
-        setShowFoundersCtaSection(result.data.show_founders_cta_section ?? true)
+        setEducationSectionHeadline(pageResult.data.education_section_headline ?? "")
+        setShowCoursesSection(pageResult.data.show_courses_section ?? true)
+        setShowMarketplaceSection(pageResult.data.show_marketplace_section ?? true)
+        setShowAiMentorsSection(pageResult.data.show_ai_mentors_section ?? true)
+        setShowFoundersCtaSection(pageResult.data.show_founders_cta_section ?? true)
+        setSelectedPlanIds(Array.isArray(pageResult.data.selected_plan_ids) ? pageResult.data.selected_plan_ids : [])
+      }
+      if (plansResult.success && plansResult.data) {
+        setActivePlans(plansResult.data)
       }
       setIsLoading(false)
     }
@@ -209,6 +222,23 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
       showToast(result.error ?? "Failed to save.", "error")
     }
     setIsSavingVisibility(false)
+  }
+
+  const togglePlanSelection = (planId: string) => {
+    setSelectedPlanIds((prev) =>
+      prev.includes(planId) ? prev.filter((id) => id !== planId) : [...prev, planId],
+    )
+  }
+
+  const handleSavePlans = async () => {
+    setIsSavingPlans(true)
+    const result = await updateSalesPagePlans(pageType, { selected_plan_ids: selectedPlanIds })
+    if (result.success) {
+      showToast("Plans saved.", "success")
+    } else {
+      showToast(result.error ?? "Failed to save.", "error")
+    }
+    setIsSavingPlans(false)
   }
 
   if (isLoading) {
@@ -596,6 +626,68 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSavingVisibility ? "Saving…" : "Save Section Visibility"}
+          </button>
+        </div>
+      </section>
+
+      {/* Plans Displayed on This Page */}
+      <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Plans Displayed on This Page</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Choose which plans appear on this sales page. Order reflects selection order.
+        </p>
+        <div className="space-y-2">
+          {(() => {
+            const selectedFirst = selectedPlanIds
+              .map((id) => activePlans.find((p) => p.id === id))
+              .filter((p): p is ActivePlanForSalesPage => p != null)
+            const unselected = activePlans.filter((p) => !selectedPlanIds.includes(p.id))
+            const orderedPlans = [...selectedFirst, ...unselected]
+            return orderedPlans.length === 0 ? (
+              <p className="text-sm text-gray-500 py-2">No active plans. Create plans in Admin → Plans.</p>
+            ) : (
+              orderedPlans.map((plan) => (
+                <label
+                  key={plan.id}
+                  className="flex items-center gap-4 py-3 px-4 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPlanIds.includes(plan.id)}
+                    onChange={() => togglePlanSelection(plan.id)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900">{plan.name}</span>
+                      {plan.most_popular && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                          Most Popular
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-0.5">
+                      {plan.price != null && plan.currency != null
+                        ? `${plan.currency} ${plan.price}`
+                        : plan.price != null
+                          ? String(plan.price)
+                          : "—"}
+                      {plan.billing ? ` / ${plan.billing}` : ""}
+                    </div>
+                  </div>
+                </label>
+              ))
+            )
+          })()}
+        </div>
+        <div className="pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleSavePlans}
+            disabled={isSavingPlans}
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingPlans ? "Saving…" : "Save Plans"}
           </button>
         </div>
       </section>

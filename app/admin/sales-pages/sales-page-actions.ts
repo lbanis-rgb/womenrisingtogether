@@ -64,6 +64,7 @@ export interface SalesPageRow extends SalesPageHeroRow {
   show_marketplace_section: boolean | null
   show_ai_mentors_section: boolean | null
   show_founders_cta_section: boolean | null
+  selected_plan_ids: string[] | null
 }
 
 export async function getSalesPageByPageType(
@@ -79,7 +80,7 @@ export async function getSalesPageByPageType(
   const { data, error } = await supabase
     .from("sales_pages")
     .select(
-      "hero_logo_url, hero_headline, hero_intro_text, hero_image_url, community_vision_headline, community_vision_image_url, community_vision_body, community_vision_bullets, education_section_headline, show_courses_section, show_marketplace_section, show_ai_mentors_section, show_founders_cta_section",
+      "hero_logo_url, hero_headline, hero_intro_text, hero_image_url, community_vision_headline, community_vision_image_url, community_vision_body, community_vision_bullets, education_section_headline, show_courses_section, show_marketplace_section, show_ai_mentors_section, show_founders_cta_section, selected_plan_ids",
     )
     .eq("page_type", pageType)
     .maybeSingle()
@@ -195,6 +196,68 @@ export async function updateSalesPageVisibility(
   const { error } = await supabase
     .from("sales_pages")
     .update(updatePayload)
+    .eq("page_type", pageType)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+export interface ActivePlanForSalesPage {
+  id: string
+  name: string
+  price: number | null
+  currency: string | null
+  billing: string | null
+  features: string[] | null
+  most_popular: boolean | null
+  payment_url: string | null
+}
+
+export async function getActivePlansForSalesPage(): Promise<{
+  success: boolean
+  data?: ActivePlanForSalesPage[]
+  error?: string
+}> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+
+  const supabase = createServiceRoleClient()
+
+  const { data, error } = await supabase
+    .from("plans")
+    .select("id, name, price, currency, billing, features, most_popular, payment_url")
+    .eq("active", true)
+    .order("name", { ascending: true })
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, data: (data ?? []) as ActivePlanForSalesPage[] }
+}
+
+export async function updateSalesPagePlans(
+  pageType: SalesPageType,
+  payload: { selected_plan_ids: string[] },
+): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+
+  const supabase = createServiceRoleClient()
+
+  const { error } = await supabase
+    .from("sales_pages")
+    .update({
+      selected_plan_ids: payload.selected_plan_ids,
+      updated_at: new Date().toISOString(),
+    })
     .eq("page_type", pageType)
 
   if (error) {
