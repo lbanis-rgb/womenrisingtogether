@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { MainSalesPage } from "@/components/MainSalesPage"
 
 const SECTION_HEADERS: Record<"main" | "founders", string> = {
   main: "Main Sales Page Settings",
@@ -322,11 +323,11 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
           <DialogHeader>
             <DialogTitle>Sales Page Preview</DialogTitle>
             <DialogDescription>
-              This modal will render the live / page preview.
+              Full sales page as rendered on the public "/" route.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50/50 p-8 text-center text-gray-500 min-h-[200px] flex items-center justify-center">
-            <p className="text-sm">Preview placeholder — live sales page content will appear here.</p>
+          <div className="flex-1 min-h-0 overflow-y-auto w-full -mx-6 px-6">
+            <MainSalesPage />
           </div>
         </DialogContent>
       </Dialog>
