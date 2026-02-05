@@ -1,6 +1,7 @@
 "use client"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SalesPageForm } from "./sales-page-form"
 
 export default function AdminSalesPagesPage() {
   return (
@@ -16,14 +17,10 @@ export default function AdminSalesPagesPage() {
             <TabsTrigger value="founders">Founders Sales Page</TabsTrigger>
           </TabsList>
           <TabsContent value="main" className="mt-6">
-            <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-              <p className="text-gray-600">Main Sales Page editor coming soon</p>
-            </div>
+            <SalesPageForm pageType="main" />
           </TabsContent>
           <TabsContent value="founders" className="mt-6">
-            <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-              <p className="text-gray-600">Founders Sales Page editor coming soon</p>
-            </div>
+            <SalesPageForm pageType="founders" />
           </TabsContent>
         </Tabs>
       </div>
