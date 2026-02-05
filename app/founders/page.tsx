@@ -1,6 +1,22 @@
 import { createClient } from "@/lib/supabase/server"
 
+function getYouTubeEmbedUrl(url?: string | null): string | null {
+  if (url == null || typeof url !== "string") return null
+  const trimmed = url.trim()
+  if (trimmed === "") return null
+  try {
+    const youtuBeMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)
+    if (youtuBeMatch) return `https://www.youtube.com/embed/${youtuBeMatch[1]}`
+    const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})/)
+    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`
+    return null
+  } catch {
+    return null
+  }
+}
+
 type FoundersRow = {
+  selected_plan_ids: string[] | null
   founders_spots_available: number | null
   founders_invite_headline: string | null
   founders_invite_body: string | null
@@ -13,6 +29,17 @@ type FoundersRow = {
   founders_claim_headline: string | null
   founders_claim_body: string | null
   founders_faq: { question: string; answer: string }[] | null
+}
+
+type PlanRow = {
+  id: string
+  name: string
+  price: number | null
+  currency: string | null
+  billing: string | null
+  features: string[] | null
+  most_popular: boolean | null
+  payment_url: string | null
 }
 
 export default async function FoundersPage() {
@@ -37,6 +64,20 @@ export default async function FoundersPage() {
   const founders = row as FoundersRow
   const spots = founders.founders_spots_available ?? null
   const spotsLabel = spots != null ? String(spots) : "—"
+
+  const planIds = Array.isArray(founders.selected_plan_ids) ? founders.selected_plan_ids : []
+  const { data: plansData } = await supabase
+    .from("plans")
+    .select("id, name, price, currency, billing, features, most_popular, payment_url")
+    .eq("active", true)
+  const allPlans = (plansData ?? []) as PlanRow[]
+  const plansById = new Map(allPlans.map((p) => [p.id, p]))
+  const orderedFoundersPlans =
+    planIds.length === 0
+      ? []
+      : planIds
+          .map((id) => plansById.get(id))
+          .filter((p): p is PlanRow => p != null)
 
   return (
     <div className="font-sans bg-white">
@@ -877,13 +918,19 @@ export default async function FoundersPage() {
           {(founders.founders_invite_media_url ?? "").trim() !== "" && (
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden aspect-video flex items-center justify-center border border-white/20">
               {founders.founders_invite_media_type === "video" ? (
-                <iframe
-                  src={founders.founders_invite_media_url ?? ""}
-                  title="Founders invite media"
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                getYouTubeEmbedUrl(founders.founders_invite_media_url) != null ? (
+                  <iframe
+                    src={getYouTubeEmbedUrl(founders.founders_invite_media_url)!}
+                    title="Founders invite media"
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/70 text-sm">
+                    Video URL could not be embedded
+                  </div>
+                )
               ) : (
                 <img
                   src={founders.founders_invite_media_url ?? ""}
@@ -1027,7 +1074,7 @@ export default async function FoundersPage() {
 
       {/* Pricing / Claim Section */}
       <section id="pricing" className="py-24 px-6 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             {(founders.founders_claim_headline ?? "").trim() !== "" && (
               <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
@@ -1038,67 +1085,74 @@ export default async function FoundersPage() {
               <p className="text-xl text-gray-600 whitespace-pre-wrap">{founders.founders_claim_body}</p>
             )}
           </div>
-          <div className="bg-white rounded-3xl shadow-2xl p-12 border-2 border-brand-200">
-            <div className="text-center mb-8">
-              <div className="inline-block bg-gradient-to-r from-brand-500 to-brand-600 text-white px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wide mb-6">
-                <i className="fa-solid fa-crown mr-2"></i>
-                Founding Leader Lifetime Deal
-              </div>
-              <div className="mb-6">
-                <p className="text-6xl font-bold text-gray-900 mb-2">
-                  {founders.founders_price_lifetime != null ? `$${founders.founders_price_lifetime}` : "$997"}
-                </p>
-                <p className="text-xl text-gray-600">Lifetime Access</p>
-              </div>
-              <div className="text-gray-600 mb-8">
-                <p className="font-semibold">or 3 payments of $397</p>
-              </div>
+          {orderedFoundersPlans.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-8">
+              {orderedFoundersPlans.map((plan) => {
+                const isPopular = plan.most_popular === true
+                const currencySymbol =
+                  plan.currency === "USD" || plan.currency == null || plan.currency === ""
+                    ? "$"
+                    : plan.currency
+                const priceDisplay =
+                  plan.price == null || plan.price === 0
+                    ? "$0"
+                    : `${currencySymbol}${plan.price}${plan.billing ? ` / ${plan.billing}` : ""}`
+                const features = Array.isArray(plan.features)
+                  ? plan.features.filter((f): f is string => typeof f === "string" && f.trim() !== "")
+                  : []
+                const ctaHref = plan.payment_url?.trim() ?? "#"
+                return (
+                  <div
+                    key={plan.id}
+                    className={
+                      isPopular
+                        ? "w-full max-w-md bg-gradient-to-br from-purple-100 to-brand-50 rounded-2xl shadow-2xl p-8 border-2 border-purple-300 relative"
+                        : "w-full max-w-md bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl p-8 border border-blue-200"
+                    }
+                  >
+                    {isPopular && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <span className="bg-gradient-to-r from-purple-600 to-brand-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                          Most Popular
+                        </span>
+                      </div>
+                    )}
+                    <div className={`text-center mb-6 ${isPopular ? "pt-2" : ""}`}>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                      <p className="text-3xl font-bold text-gray-900">{priceDisplay}</p>
+                    </div>
+                    <ul className="space-y-4 mb-8">
+                      {features.map((f, i) => (
+                        <li key={i} className="flex items-start space-x-3">
+                          <i
+                            className={`fa-solid fa-check mt-1 ${isPopular ? "text-purple-600" : "text-blue-500"}`}
+                          />
+                          <span className="text-gray-700">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <a
+                      href={ctaHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={
+                        isPopular
+                          ? "block w-full text-center px-8 py-4 bg-gradient-to-r from-purple-600 to-brand-600 text-white rounded-full hover:from-purple-700 hover:to-purple-700 transition-all duration-200 font-semibold shadow-lg"
+                          : "block w-full text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
+                      }
+                    >
+                      {plan.price == null || plan.price === 0 ? "Get Started" : `Choose ${plan.name}`}
+                    </a>
+                  </div>
+                )
+              })}
             </div>
-            <div className="bg-gradient-to-br from-brand-50 to-gray-50 rounded-2xl p-8 mb-8">
-              <h4 className="text-xl font-bold text-gray-900 mb-6">What's included:</h4>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <i className="fa-solid fa-circle-check text-brand-600 text-xl mt-1"></i>
-                  <span className="text-gray-800 font-medium">Everything unlocked</span>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <i className="fa-solid fa-circle-check text-brand-600 text-xl mt-1"></i>
-                  <span className="text-gray-800 font-medium">Full creator access</span>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <i className="fa-solid fa-circle-check text-brand-600 text-xl mt-1"></i>
-                  <span className="text-gray-800 font-medium">Visibility and credibility positioning</span>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <i className="fa-solid fa-circle-check text-brand-600 text-xl mt-1"></i>
-                  <span className="text-gray-800 font-medium">
-                    Built-in monetization paths through courses, offers, events, and mentors
-                  </span>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <i className="fa-solid fa-circle-check text-brand-600 text-xl mt-1"></i>
-                  <span className="text-gray-800 font-medium">Lifetime value with one-time investment</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-center mb-8">
-              <a
-                href="#apply"
-                className="inline-block bg-gradient-to-r from-brand-500 to-brand-600 text-white px-12 py-5 rounded-full font-bold text-xl hover:shadow-2xl transition transform hover:scale-105"
-              >
-                Claim a Founding Leader Spot
-              </a>
-              <p className="text-sm text-gray-500 italic mt-4">
-                {spots != null ? `Available until ${spots} spots are filled.` : "Available until spots are filled."}
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-              <p className="text-gray-700 text-center">
-                <i className="fa-solid fa-shield-check text-brand-500 mr-2"></i>
-                <span className="font-semibold">Optional guarantee or risk-reversal copy goes here (placeholder)</span>
-              </p>
-            </div>
-          </div>
+          )}
+          {orderedFoundersPlans.length > 0 && (
+            <p className="text-sm text-gray-500 italic text-center mt-6">
+              {spots != null ? `Available until ${spots} spots are filled.` : "Available until spots are filled."}
+            </p>
+          )}
         </div>
       </section>
 
