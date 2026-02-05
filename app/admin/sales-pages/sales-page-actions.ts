@@ -78,7 +78,7 @@ export async function getSalesPageByPageType(
   const supabase = createServiceRoleClient()
 
   const { data, error } = await supabase
-    .from("sales_pages")
+    .from("public_sales_pages")
     .select(
       "hero_logo_url, hero_headline, hero_intro_text, hero_image_url, community_vision_headline, community_vision_image_url, community_vision_body, community_vision_bullets, education_section_headline, show_courses_section, show_marketplace_section, show_ai_mentors_section, show_founders_cta_section, selected_plan_ids",
     )

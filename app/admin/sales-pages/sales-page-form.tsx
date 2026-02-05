@@ -13,6 +13,7 @@ import {
   updateSalesPagePlans,
   type SalesPageType,
   type ActivePlanForSalesPage,
+  type SalesPageRow,
 } from "./sales-page-actions"
 
 const SECTION_HEADERS: Record<"main" | "founders", string> = {
@@ -54,30 +55,52 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const heroImageInputRef = useRef<HTMLInputElement>(null)
   const communityVisionImageInputRef = useRef<HTMLInputElement>(null)
 
+  /** Hydrate all form state from the fetched row (or defaults when no row). Call after data loads. */
+  const hydrateFormFromRow = (row: SalesPageRow | null) => {
+    if (!row) {
+      setHeroLogoUrl("")
+      setHeroHeadline("")
+      setHeroIntroText("")
+      setHeroImageUrl("")
+      setCommunityVisionHeadline("")
+      setCommunityVisionImageUrl("")
+      setCommunityVisionBody("")
+      setCommunityVisionBullets([])
+      setEducationSectionHeadline("")
+      setShowCoursesSection(true)
+      setShowMarketplaceSection(true)
+      setShowAiMentorsSection(true)
+      setShowFoundersCtaSection(true)
+      setSelectedPlanIds([])
+      return
+    }
+    setHeroLogoUrl(row.hero_logo_url ?? "")
+    setHeroHeadline(row.hero_headline ?? "")
+    setHeroIntroText(row.hero_intro_text ?? "")
+    setHeroImageUrl(row.hero_image_url ?? "")
+    setCommunityVisionHeadline(row.community_vision_headline ?? "")
+    setCommunityVisionImageUrl(row.community_vision_image_url ?? "")
+    setCommunityVisionBody(row.community_vision_body ?? "")
+    setCommunityVisionBullets(Array.isArray(row.community_vision_bullets) ? row.community_vision_bullets : [])
+    setEducationSectionHeadline(row.education_section_headline ?? "")
+    setShowCoursesSection(row.show_courses_section ?? true)
+    setShowMarketplaceSection(row.show_marketplace_section ?? true)
+    setShowAiMentorsSection(row.show_ai_mentors_section ?? true)
+    setShowFoundersCtaSection(row.show_founders_cta_section ?? true)
+    setSelectedPlanIds(Array.isArray(row.selected_plan_ids) ? row.selected_plan_ids : [])
+  }
+
   useEffect(() => {
+    let cancelled = false
     async function load() {
       setIsLoading(true)
       const [pageResult, plansResult] = await Promise.all([
         getSalesPageByPageType(pageType),
         getActivePlansForSalesPage(),
       ])
-      if (pageResult.success && pageResult.data) {
-        setHeroLogoUrl(pageResult.data.hero_logo_url ?? "")
-        setHeroHeadline(pageResult.data.hero_headline ?? "")
-        setHeroIntroText(pageResult.data.hero_intro_text ?? "")
-        setHeroImageUrl(pageResult.data.hero_image_url ?? "")
-        setCommunityVisionHeadline(pageResult.data.community_vision_headline ?? "")
-        setCommunityVisionImageUrl(pageResult.data.community_vision_image_url ?? "")
-        setCommunityVisionBody(pageResult.data.community_vision_body ?? "")
-        setCommunityVisionBullets(
-          Array.isArray(pageResult.data.community_vision_bullets) ? pageResult.data.community_vision_bullets : [],
-        )
-        setEducationSectionHeadline(pageResult.data.education_section_headline ?? "")
-        setShowCoursesSection(pageResult.data.show_courses_section ?? true)
-        setShowMarketplaceSection(pageResult.data.show_marketplace_section ?? true)
-        setShowAiMentorsSection(pageResult.data.show_ai_mentors_section ?? true)
-        setShowFoundersCtaSection(pageResult.data.show_founders_cta_section ?? true)
-        setSelectedPlanIds(Array.isArray(pageResult.data.selected_plan_ids) ? pageResult.data.selected_plan_ids : [])
+      if (cancelled) return
+      if (pageResult.success) {
+        hydrateFormFromRow(pageResult.data ?? null)
       }
       if (plansResult.success && plansResult.data) {
         setActivePlans(plansResult.data)
@@ -85,6 +108,9 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
       setIsLoading(false)
     }
     load()
+    return () => {
+      cancelled = true
+    }
   }, [pageType])
 
   const showToast = (message: string, type: "success" | "error") => {
