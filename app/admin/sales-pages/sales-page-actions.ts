@@ -16,6 +16,10 @@ function createServiceRoleClient() {
   })
 }
 
+function getSalesPageSlug(pageType: SalesPageType) {
+  return pageType === "founders" ? "founders" : "home"
+}
+
 async function verifyAdminAccess(): Promise<{ authorized: boolean; error: string | null }> {
   const cookieStore = await cookies()
 
@@ -102,7 +106,7 @@ export async function updateSalesPageCommunityVision(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("slug", "home")
+    .eq("slug", getSalesPageSlug(pageType))
 
   if (error) {
     return { success: false, error: error.message }
@@ -131,7 +135,7 @@ export async function updateSalesPageEducationSection(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("slug", "home")
+    .eq("slug", getSalesPageSlug(pageType))
 
   if (error) {
     return { success: false, error: error.message }
@@ -173,7 +177,7 @@ export async function updateSalesPageVisibility(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("slug", "home")
+    .eq("slug", getSalesPageSlug(pageType))
 
   if (error) {
     return { success: false, error: error.message }
@@ -245,7 +249,7 @@ export async function updateSalesPagePlans(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("slug", "home")
+    .eq("slug", getSalesPageSlug(pageType))
 
   if (error) {
     return { success: false, error: error.message }
@@ -283,7 +287,7 @@ export async function updateSalesPageHero(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("slug", "home")
+    .eq("slug", getSalesPageSlug(pageType))
 
   if (error) {
     return { success: false, error: error.message }
