@@ -32,7 +32,13 @@ const SECTION_HEADERS: Record<"main" | "founders", string> = {
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
-export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
+export function SalesPageForm({
+  pageType,
+  salesPage,
+}: {
+  pageType: SalesPageType
+  salesPage?: SalesPageRow | null
+}) {
   const [heroLogoUrl, setHeroLogoUrl] = useState("")
   const [heroHeadline, setHeroHeadline] = useState("")
   const [heroIntroText, setHeroIntroText] = useState("")
@@ -327,7 +333,7 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto w-full -mx-6 px-6">
-            <MainSalesPage />
+            <MainSalesPage salesPage={salesPage ?? null} />
           </div>
         </DialogContent>
       </Dialog>

@@ -4,9 +4,11 @@ import type { SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
 /**
  * Shared sales page content used by the public "/" route and the admin preview modal.
  * No layout chrome (admin headers, editor UI). No preview-only props.
- * When `data` is passed (e.g. from "/"), it is available for section-by-section mapping in later steps.
+ * When `salesPage` is passed, it is used for Hero, logo, and future section mapping.
  */
-export function MainSalesPage({ data }: { data?: SalesPageRow | null }) {
+export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }) {
+  const logoUrl = salesPage?.logo_url ?? process.env.NEXT_PUBLIC_BRAND_LOGO_URL
+
   return (
     <div className="font-sans bg-white">
       {/* Header with Login */}
@@ -25,7 +27,7 @@ export function MainSalesPage({ data }: { data?: SalesPageRow | null }) {
       <section className="bg-gradient-to-b from-gray-50 to-gray-50 pt-8 pb-8 px-6">
         <div className="max-w-7xl mx-auto flex justify-center">
           <img
-            src={process.env.NEXT_PUBLIC_BRAND_LOGO_URL}
+            src={logoUrl}
             alt="Brand Logo"
             className="h-16 w-auto"
           />
@@ -38,10 +40,10 @@ export function MainSalesPage({ data }: { data?: SalesPageRow | null }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight text-balance">
-                {data?.hero_headline ?? "A Community Built for Connection, Learning, and Action"}
+                {salesPage?.hero_headline ?? "A Community Built for Connection, Learning, and Action"}
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed">
-                {data?.hero_intro_text ??
+                {salesPage?.hero_intro_text ??
                   "A modern community platform where people come together to share ideas, learn from trusted voices, and move forward — not just consume content."}
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-4">
@@ -63,7 +65,7 @@ export function MainSalesPage({ data }: { data?: SalesPageRow | null }) {
               <div className="bg-gradient-to-br from-brand-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden aspect-video flex items-center justify-center border border-gray-200">
                 <img
                   src={
-                    data?.hero_image_url ??
+                    salesPage?.hero_image_url ??
                     "https://storage.googleapis.com/uxpilot-auth.appspot.com/XPYZqTkHKUezklygXKVAtUhWQWm1%2F9299ed61-6619-432d-9f18-daad08f3cf55.png"
                   }
                   alt="modern community platform dashboard showing member feed, groups, and engagement metrics with clean premium interface design"
@@ -958,7 +960,7 @@ export function MainSalesPage({ data }: { data?: SalesPageRow | null }) {
             {/* Logo - Bottom Left */}
             <div className="flex items-center">
               <img
-                src={process.env.NEXT_PUBLIC_BRAND_LOGO_URL}
+                src={logoUrl}
                 alt="Brand Logo"
                 className="h-8 w-auto brightness-0 invert"
               />
