@@ -71,6 +71,13 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
       : null
   const showWhoForBlock = visionBullets != null && visionBullets.length > 0
 
+  const educationHeadline =
+    salesPage?.education_headline?.trim() ?? "Education Powered by Experts and Proven Voices"
+  const showCourses = salesPage?.show_courses !== false
+  const showMarketplace = salesPage?.show_marketplace !== false
+  const showAiMentors = salesPage?.show_ai_mentors !== false
+  const showFoundersBridge = salesPage?.show_founders_bridge !== false
+
   return (
     <div className="font-sans bg-white">
       {/* Header with Login */}
@@ -473,7 +480,7 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Education Powered by Experts and Proven Voices
+              {educationHeadline}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               This community features content from chosen experts and leaders — so members can learn from real
@@ -574,6 +581,8 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
         </div>
       </section>
 
+      {showCourses && (
+        <>
       {/* Courses Section */}
       <section id="courses" className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -660,7 +669,11 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
           </div>
         </div>
       </section>
+        </>
+      )}
 
+      {showMarketplace && (
+        <>
       {/* Marketplace Section - Products & Services */}
       <section id="marketplace" className="py-24 px-6 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto">
@@ -724,7 +737,11 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
           </div>
         </div>
       </section>
+        </>
+      )}
 
+      {showAiMentors && (
+        <>
       {/* AI Mentors Section */}
       <section id="ai-mentors" className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -817,6 +834,8 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
           </div>
         </div>
       </section>
+        </>
+      )}
 
       {/* Membership Paths Section */}
       <section id="membership" className="py-24 px-6 bg-gradient-to-b from-gray-50 to-white">
@@ -959,6 +978,8 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
         </div>
       </section>
 
+      {showFoundersBridge && (
+        <>
       {/* Leaders & Creators Bridge Section */}
       <section id="leaders" className="py-24 px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
@@ -977,6 +998,8 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
           </Link>
         </div>
       </section>
+        </>
+      )}
 
       {/* Final CTA Section */}
       <section id="final-cta" className="py-24 px-6 bg-gradient-to-br from-brand-600 to-brand-800">
