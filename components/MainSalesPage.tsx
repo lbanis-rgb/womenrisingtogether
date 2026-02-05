@@ -1,10 +1,12 @@
 import Link from "next/link"
+import type { SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
 
 /**
  * Shared sales page content used by the public "/" route and the admin preview modal.
  * No layout chrome (admin headers, editor UI). No preview-only props.
+ * When `data` is passed (e.g. from "/"), it is available for section-by-section mapping in later steps.
  */
-export function MainSalesPage() {
+export function MainSalesPage({ data }: { data?: SalesPageRow | null }) {
   return (
     <div className="font-sans bg-white">
       {/* Header with Login */}
@@ -36,11 +38,11 @@ export function MainSalesPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight text-balance">
-                A Community Built for Connection, Learning, and Action
+                {data?.hero_headline ?? "A Community Built for Connection, Learning, and Action"}
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed">
-                A modern community platform where people come together to share ideas, learn from trusted voices, and
-                move forward — not just consume content.
+                {data?.hero_intro_text ??
+                  "A modern community platform where people come together to share ideas, learn from trusted voices, and move forward — not just consume content."}
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4 pt-4">
                 <a
@@ -60,7 +62,10 @@ export function MainSalesPage() {
             <div className="relative">
               <div className="bg-gradient-to-br from-brand-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden aspect-video flex items-center justify-center border border-gray-200">
                 <img
-                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/XPYZqTkHKUezklygXKVAtUhWQWm1%2F9299ed61-6619-432d-9f18-daad08f3cf55.png"
+                  src={
+                    data?.hero_image_url ??
+                    "https://storage.googleapis.com/uxpilot-auth.appspot.com/XPYZqTkHKUezklygXKVAtUhWQWm1%2F9299ed61-6619-432d-9f18-daad08f3cf55.png"
+                  }
                   alt="modern community platform dashboard showing member feed, groups, and engagement metrics with clean premium interface design"
                   className="w-full h-full object-cover"
                 />
