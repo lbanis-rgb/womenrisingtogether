@@ -1,17 +1,436 @@
 "use client"
 
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
+import {
+  getSalesPageByPageType,
+  updateSalesPageHero,
+  updateSalesPageCommunityVision,
+  type SalesPageType,
+} from "./sales-page-actions"
+
 const SECTION_HEADERS: Record<"main" | "founders", string> = {
   main: "Main Sales Page Settings",
   founders: "Founders Sales Page Settings",
 }
 
-export function SalesPageForm({ pageType }: { pageType: "main" | "founders" }) {
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+
+export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
+  const [heroLogoUrl, setHeroLogoUrl] = useState("")
+  const [heroHeadline, setHeroHeadline] = useState("")
+  const [heroIntroText, setHeroIntroText] = useState("")
+  const [heroImageUrl, setHeroImageUrl] = useState("")
+  const [communityVisionHeadline, setCommunityVisionHeadline] = useState("")
+  const [communityVisionImageUrl, setCommunityVisionImageUrl] = useState("")
+  const [communityVisionBody, setCommunityVisionBody] = useState("")
+  const [communityVisionBullets, setCommunityVisionBullets] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isSavingCommunityVision, setIsSavingCommunityVision] = useState(false)
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false)
+  const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
+  const [isUploadingCommunityVisionImage, setIsUploadingCommunityVisionImage] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
+
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const heroImageInputRef = useRef<HTMLInputElement>(null)
+  const communityVisionImageInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    async function load() {
+      setIsLoading(true)
+      const result = await getSalesPageByPageType(pageType)
+      if (result.success && result.data) {
+        setHeroLogoUrl(result.data.hero_logo_url ?? "")
+        setHeroHeadline(result.data.hero_headline ?? "")
+        setHeroIntroText(result.data.hero_intro_text ?? "")
+        setHeroImageUrl(result.data.hero_image_url ?? "")
+        setCommunityVisionHeadline(result.data.community_vision_headline ?? "")
+        setCommunityVisionImageUrl(result.data.community_vision_image_url ?? "")
+        setCommunityVisionBody(result.data.community_vision_body ?? "")
+        setCommunityVisionBullets(
+          Array.isArray(result.data.community_vision_bullets) ? result.data.community_vision_bullets : [],
+        )
+      }
+      setIsLoading(false)
+    }
+    load()
+  }, [pageType])
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    kind: "logo" | "hero" | "community-vision",
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      showToast("Please upload a JPG, PNG, or WebP image.", "error")
+      return
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      showToast("Image must be less than 5MB.", "error")
+      return
+    }
+
+    const supabase = getSupabaseBrowserClient()
+    if (!supabase) {
+      showToast("Upload unavailable.", "error")
+      return
+    }
+
+    if (kind === "logo") setIsUploadingLogo(true)
+    else if (kind === "hero") setIsUploadingHeroImage(true)
+    else setIsUploadingCommunityVisionImage(true)
+
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"
+      const timestamp = Date.now()
+      const fileName = `sales-pages/${pageType}/${kind}-${timestamp}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from("dashboard-assets")
+        .upload(fileName, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from("dashboard-assets").getPublicUrl(fileName)
+      const publicUrl = urlData.publicUrl
+
+      if (kind === "logo") {
+        setHeroLogoUrl(publicUrl)
+        logoInputRef.current && (logoInputRef.current.value = "")
+      } else if (kind === "hero") {
+        setHeroImageUrl(publicUrl)
+        heroImageInputRef.current && (heroImageInputRef.current.value = "")
+      } else {
+        setCommunityVisionImageUrl(publicUrl)
+        communityVisionImageInputRef.current && (communityVisionImageInputRef.current.value = "")
+      }
+      const label = kind === "logo" ? "Logo" : kind === "hero" ? "Hero image" : "Community Vision image"
+      showToast(`${label} uploaded.`, "success")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Upload failed.", "error")
+    } finally {
+      setIsUploadingLogo(false)
+      setIsUploadingHeroImage(false)
+      setIsUploadingCommunityVisionImage(false)
+    }
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    const result = await updateSalesPageHero(pageType, {
+      hero_logo_url: heroLogoUrl || null,
+      hero_headline: heroHeadline || null,
+      hero_intro_text: heroIntroText || null,
+      hero_image_url: heroImageUrl || null,
+    })
+    if (result.success) {
+      showToast("Hero section saved.", "success")
+    } else {
+      showToast(result.error ?? "Failed to save.", "error")
+    }
+    setIsSaving(false)
+  }
+
+  const handleSaveCommunityVision = async () => {
+    setIsSavingCommunityVision(true)
+    const result = await updateSalesPageCommunityVision(pageType, {
+      community_vision_headline: communityVisionHeadline || null,
+      community_vision_image_url: communityVisionImageUrl || null,
+      community_vision_body: communityVisionBody || null,
+      community_vision_bullets: communityVisionBullets.length ? communityVisionBullets : null,
+    })
+    if (result.success) {
+      showToast("Community Vision saved.", "success")
+    } else {
+      showToast(result.error ?? "Failed to save.", "error")
+    }
+    setIsSavingCommunityVision(false)
+  }
+
+  const addBullet = () => setCommunityVisionBullets((prev) => [...prev, ""])
+  const removeBullet = (index: number) =>
+    setCommunityVisionBullets((prev) => prev.filter((_, i) => i !== index))
+  const setBullet = (index: number, value: string) =>
+    setCommunityVisionBullets((prev) => {
+      const next = [...prev]
+      next[index] = value
+      return next
+    })
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+        <p className="text-gray-500">Loading…</p>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">{SECTION_HEADERS[pageType]}</h2>
-      <p className="text-gray-600">
-        Form fields for this sales page will be added in a future update.
-      </p>
+      <h2 className="text-lg font-semibold text-gray-900 mb-6">{SECTION_HEADERS[pageType]}</h2>
+
+      {/* Hero Section */}
+      <section className="space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Hero Section</h3>
+
+        <div className="space-y-6">
+          {/* Logo image upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Logo image</label>
+            <div className="flex items-start gap-4">
+              <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                {heroLogoUrl ? (
+                  <img
+                    src={heroLogoUrl}
+                    alt="Logo preview"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-gray-400 text-xs text-center px-1">No logo</span>
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  accept={ALLOWED_IMAGE_TYPES.join(",")}
+                  onChange={(e) => handleImageUpload(e, "logo")}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={isUploadingLogo}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {isUploadingLogo ? "Uploading…" : "Upload logo"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Hero headline */}
+          <div>
+            <label htmlFor="hero-headline" className="block text-sm font-medium text-gray-700 mb-2">
+              Hero headline
+            </label>
+            <input
+              type="text"
+              id="hero-headline"
+              value={heroHeadline}
+              onChange={(e) => setHeroHeadline(e.target.value)}
+              placeholder="Enter headline"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Hero intro text */}
+          <div>
+            <label htmlFor="hero-intro" className="block text-sm font-medium text-gray-700 mb-2">
+              Hero intro text
+            </label>
+            <textarea
+              id="hero-intro"
+              rows={4}
+              value={heroIntroText}
+              onChange={(e) => setHeroIntroText(e.target.value)}
+              placeholder="Enter intro text"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Hero image upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hero image</label>
+            <div className="flex items-start gap-4">
+              <div className="w-40 h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                {heroImageUrl ? (
+                  <img
+                    src={heroImageUrl}
+                    alt="Hero preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-gray-400 text-xs text-center px-1">No image</span>
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  ref={heroImageInputRef}
+                  accept={ALLOWED_IMAGE_TYPES.join(",")}
+                  onChange={(e) => handleImageUpload(e, "hero")}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => heroImageInputRef.current?.click()}
+                  disabled={isUploadingHeroImage}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {isUploadingHeroImage ? "Uploading…" : "Upload hero image"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving ? "Saving…" : "Save Hero Section"}
+          </button>
+        </div>
+      </section>
+
+      {/* Community Vision */}
+      <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Community Vision</h3>
+
+        <div className="space-y-6">
+          <div>
+            <label
+              htmlFor="community-vision-headline"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Section headline
+            </label>
+            <input
+              type="text"
+              id="community-vision-headline"
+              value={communityVisionHeadline}
+              onChange={(e) => setCommunityVisionHeadline(e.target.value)}
+              placeholder="Enter section headline"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Optional image override
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              If no image is set, the frontend will use its default image.
+            </p>
+            <div className="flex items-start gap-4">
+              <div className="w-40 h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                {communityVisionImageUrl ? (
+                  <img
+                    src={communityVisionImageUrl}
+                    alt="Community Vision preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-gray-400 text-xs text-center px-1">No image</span>
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  ref={communityVisionImageInputRef}
+                  accept={ALLOWED_IMAGE_TYPES.join(",")}
+                  onChange={(e) => handleImageUpload(e, "community-vision")}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => communityVisionImageInputRef.current?.click()}
+                  disabled={isUploadingCommunityVisionImage}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {isUploadingCommunityVisionImage ? "Uploading…" : "Upload image"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="community-vision-body"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Body text
+            </label>
+            <textarea
+              id="community-vision-body"
+              rows={4}
+              value={communityVisionBody}
+              onChange={(e) => setCommunityVisionBody(e.target.value)}
+              placeholder="Enter body text"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Who It&apos;s For</label>
+            <p className="text-xs text-gray-500 mb-2">Editable list of bullet items.</p>
+            <div className="space-y-2">
+              {communityVisionBullets.map((bullet, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={bullet}
+                    onChange={(e) => setBullet(index, e.target.value)}
+                    placeholder={`Bullet ${index + 1}`}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeBullet(index)}
+                    className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 text-sm font-medium"
+                    title="Remove bullet"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addBullet}
+                className="px-4 py-2 border border-dashed border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium"
+              >
+                Add bullet
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleSaveCommunityVision}
+            disabled={isSavingCommunityVision}
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingCommunityVision ? "Saving…" : "Save Community Vision"}
+          </button>
+        </div>
+      </section>
+
+      {toast && (
+        <div
+          className={`fixed top-5 right-5 z-50 px-6 py-3 rounded-lg shadow-lg text-white ${
+            toast.type === "success" ? "bg-green-500" : "bg-red-500"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }
