@@ -95,7 +95,7 @@ export function SalesPageForm({
     setHeroImageUrl(row.hero_image_url ?? "")
     setCommunityVisionHeadline(row.vision_headline ?? "")
     setCommunityVisionImageUrl(row.vision_image_url ?? "")
-    setCommunityVisionBody("")
+    setCommunityVisionBody(row.vision_body_text ?? "")
     setCommunityVisionBullets(Array.isArray(row.vision_who_for_bullets) ? row.vision_who_for_bullets : [])
     setEducationSectionHeadline(row.education_headline ?? "")
     setShowCoursesSection(row.show_courses ?? true)
@@ -233,6 +233,7 @@ export function SalesPageForm({
     setIsSavingCommunityVision(true)
     const result = await updateSalesPageCommunityVision(pageType, {
       vision_headline: communityVisionHeadline || null,
+      vision_body_text: communityVisionBody ?? null,
       vision_image_url: communityVisionImageUrl || null,
       vision_who_for_bullets: communityVisionBullets.length ? communityVisionBullets : null,
     })
@@ -519,18 +520,22 @@ export function SalesPageForm({
 
           <div>
             <label
-              htmlFor="community-vision-body"
+              htmlFor="vision_body_text"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Body text
+              Vision Body Text
             </label>
+            <p className="text-xs text-gray-500 mb-2">
+              Supports formatting (bold, italics, paragraphs).
+            </p>
             <textarea
-              id="community-vision-body"
-              rows={4}
+              id="vision_body_text"
+              name="vision_body_text"
+              rows={6}
               value={communityVisionBody}
               onChange={(e) => setCommunityVisionBody(e.target.value)}
-              placeholder="Enter body text"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder="Enter body text (line breaks and spacing are preserved)"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[120px] whitespace-pre-wrap"
             />
           </div>
 

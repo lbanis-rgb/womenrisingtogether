@@ -56,6 +56,7 @@ export interface SalesPageHeroRow {
 
 export interface SalesPageRow extends SalesPageHeroRow {
   vision_headline: string | null
+  vision_body_text: string | null
   vision_image_url: string | null
   vision_who_for_bullets: string[] | null
   education_headline: string | null
@@ -68,6 +69,7 @@ export interface SalesPageRow extends SalesPageHeroRow {
 
 export interface UpdateSalesPageCommunityVisionPayload {
   vision_headline?: string | null
+  vision_body_text?: string | null
   vision_image_url?: string | null
   vision_who_for_bullets?: string[] | null
 }
@@ -88,6 +90,8 @@ export async function updateSalesPageCommunityVision(
   }
   if (payload.vision_headline !== undefined)
     updatePayload.vision_headline = payload.vision_headline
+  if (payload.vision_body_text !== undefined)
+    updatePayload.vision_body_text = payload.vision_body_text
   if (payload.vision_image_url !== undefined)
     updatePayload.vision_image_url = payload.vision_image_url
   if (payload.vision_who_for_bullets !== undefined)
