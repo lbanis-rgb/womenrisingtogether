@@ -155,7 +155,7 @@ export async function sendAdminMessage(
     // 5️⃣ Trigger Edge Function email
     if (recipientProfile?.inbox_emails_enabled === true) {
       await fetch(
-        "https://onvdagnymzptoilykeer.supabase.co/functions/v1/notify-inbox",
+        `${process.env.SUPABASE_FUNCTIONS_URL}/notify-inbox`,
         {
           method: "POST",
           headers: {
