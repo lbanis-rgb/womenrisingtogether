@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
-import { updateMemberPlan, updateMemberStatus } from "./actions"
+import { updateMemberPlan, updateMemberStatus, updateMemberAdminAccess } from "./actions"
 import { sendAdminMessage } from "@/app/admin/actions/send-message"
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ type Member = {
   plan_id: string | null
   plan_name: string | null
   is_active: boolean
+  is_creator: boolean
   created_at: string
 }
 
@@ -55,6 +56,9 @@ export default function AdminMembersPage() {
   const [confirmAction, setConfirmAction] = useState<"suspend" | "unsuspend" | "delete" | null>(null)
   const [confirmMember, setConfirmMember] = useState<Member | null>(null)
 
+  const [adminConfirmOpen, setAdminConfirmOpen] = useState(false)
+  const [adminConfirmMember, setAdminConfirmMember] = useState<Member | null>(null)
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
@@ -80,7 +84,7 @@ export default function AdminMembersPage() {
       // Fetch members from profiles
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, plan_id, is_active, created_at")
+        .select("id, email, full_name, plan_id, is_active, is_creator, created_at")
         .order("created_at", { ascending: false })
 
       if (error) {
@@ -102,6 +106,7 @@ export default function AdminMembersPage() {
             ? plansMap.get(profile.plan_id) || (plansError ? "Unknown Plan" : "No Plan")
             : "No Plan",
           is_active: profile.is_active ?? true,
+          is_creator: profile.is_creator ?? false,
           created_at: profile.created_at,
         }))
 
@@ -266,6 +271,28 @@ export default function AdminMembersPage() {
     setConfirmModalOpen(false)
     setConfirmMember(null)
     setConfirmAction(null)
+  }
+
+  const handleToggleAdminAccess = (member: Member) => {
+    setAdminConfirmMember(member)
+    setAdminConfirmOpen(true)
+  }
+
+  const handleConfirmAdminAccess = async () => {
+    if (!adminConfirmMember) return
+
+    const makeAdmin = !adminConfirmMember.is_creator
+    const result = await updateMemberAdminAccess(adminConfirmMember.id, makeAdmin)
+
+    if (result.success) {
+      setMembersData((prev) =>
+        prev.map((m) => (m.id === adminConfirmMember.id ? { ...m, is_creator: makeAdmin } : m)),
+      )
+      setAdminConfirmOpen(false)
+      setAdminConfirmMember(null)
+    } else {
+      alert(`Failed to update admin access: ${result.error}`)
+    }
   }
 
   return (
@@ -523,6 +550,9 @@ export default function AdminMembersPage() {
                                 <DropdownMenuItem onClick={() => handleOpenChangePlan(member)}>
                                   Change Plan
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleAdminAccess(member)}>
+                                  {member.is_creator ? "Remove Admin Access" : "Give Admin Access"}
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => handleSuspendUnsuspend(member)}>
                                   {member.is_active ? "Suspend Member" : "Unsuspend Member"}
@@ -696,6 +726,43 @@ export default function AdminMembersPage() {
                 }`}
               >
                 {confirmAction === "delete" ? "Delete" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Access Confirmation Modal */}
+      {adminConfirmOpen && adminConfirmMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {adminConfirmMember.is_creator ? "Remove Admin Access" : "Grant Admin Access"}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-600">
+                {adminConfirmMember.is_creator
+                  ? "This will remove admin access from this user."
+                  : "This will give this user full admin access to the platform."}
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setAdminConfirmOpen(false)
+                  setAdminConfirmMember(null)
+                }}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAdminAccess}
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+              >
+                Confirm
               </button>
             </div>
           </div>

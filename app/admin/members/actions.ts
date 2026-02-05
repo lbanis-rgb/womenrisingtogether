@@ -134,3 +134,24 @@ export async function updateMemberStatus(
 
   return { success: true }
 }
+
+export async function updateMemberAdminAccess(
+  profileId: string,
+  makeAdmin: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+
+  const supabase = createServiceRoleClient()
+
+  const { error } = await supabase.from("profiles").update({ is_creator: makeAdmin }).eq("id", profileId)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
