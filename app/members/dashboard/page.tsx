@@ -217,7 +217,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col bg-slate-50 min-h-full">
       <div className="relative w-full h-[140px] md:h-[200px] overflow-hidden rounded-b-2xl">
-        <Image src={headerImageUrl"} alt="" fill className="object-cover" priority />
+        <Image src={headerImageUrl} alt="" fill className="object-cover" priority />
       </div>
 
       <div className="flex flex-col gap-8 px-6 py-8 lg:px-8 lg:py-10">
