@@ -71,6 +71,18 @@ export interface SalesPageRow extends SalesPageHeroRow {
   membership_headline: string | null
   membership_intro: string | null
   selected_plan_ids: string[] | null
+  founders_spots_available: number | null
+  founders_invite_headline: string | null
+  founders_invite_body: string | null
+  founders_invite_media_url: string | null
+  founders_invite_media_type: "image" | "video" | null
+  founders_comparison_headline: string | null
+  founders_comparison_subhead: string | null
+  founders_price_lifetime: number | null
+  founders_price_comparison_monthly: number | null
+  founders_claim_headline: string | null
+  founders_claim_body: string | null
+  founders_faq: { question: string; answer: string }[] | null
 }
 
 export interface UpdateSalesPageCommunityVisionPayload {
@@ -325,4 +337,110 @@ export async function uploadSalesPageImage(
 
   const { data: urlData } = supabase.storage.from("dashboard-assets").getPublicUrl(fileName)
   return { success: true, url: urlData.publicUrl }
+}
+
+export async function updateFoundersAvailability(payload: {
+  founders_spots_available: number | null
+}): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+  const supabase = createServiceRoleClient()
+  const { error } = await supabase
+    .from("public_sales_pages")
+    .update({
+      founders_spots_available: payload.founders_spots_available,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("slug", "founders")
+  if (error) return { success: false, error: error.message }
+  return { success: true }
+}
+
+export async function updateFoundersInviteSection(payload: {
+  founders_invite_headline?: string | null
+  founders_invite_body?: string | null
+  founders_invite_media_url?: string | null
+  founders_invite_media_type?: "image" | "video" | null
+}): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+  const supabase = createServiceRoleClient()
+  const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (payload.founders_invite_headline !== undefined) updatePayload.founders_invite_headline = payload.founders_invite_headline
+  if (payload.founders_invite_body !== undefined) updatePayload.founders_invite_body = payload.founders_invite_body
+  if (payload.founders_invite_media_url !== undefined) updatePayload.founders_invite_media_url = payload.founders_invite_media_url
+  if (payload.founders_invite_media_type !== undefined) updatePayload.founders_invite_media_type = payload.founders_invite_media_type
+  const { error } = await supabase
+    .from("public_sales_pages")
+    .update(updatePayload)
+    .eq("slug", "founders")
+  if (error) return { success: false, error: error.message }
+  return { success: true }
+}
+
+export async function updateFoundersComparisonSection(payload: {
+  founders_comparison_headline?: string | null
+  founders_comparison_subhead?: string | null
+  founders_price_lifetime?: number | null
+  founders_price_comparison_monthly?: number | null
+}): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+  const supabase = createServiceRoleClient()
+  const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (payload.founders_comparison_headline !== undefined) updatePayload.founders_comparison_headline = payload.founders_comparison_headline
+  if (payload.founders_comparison_subhead !== undefined) updatePayload.founders_comparison_subhead = payload.founders_comparison_subhead
+  if (payload.founders_price_lifetime !== undefined) updatePayload.founders_price_lifetime = payload.founders_price_lifetime
+  if (payload.founders_price_comparison_monthly !== undefined) updatePayload.founders_price_comparison_monthly = payload.founders_price_comparison_monthly
+  const { error } = await supabase
+    .from("public_sales_pages")
+    .update(updatePayload)
+    .eq("slug", "founders")
+  if (error) return { success: false, error: error.message }
+  return { success: true }
+}
+
+export async function updateFoundersClaimSection(payload: {
+  founders_claim_headline?: string | null
+  founders_claim_body?: string | null
+}): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+  const supabase = createServiceRoleClient()
+  const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (payload.founders_claim_headline !== undefined) updatePayload.founders_claim_headline = payload.founders_claim_headline
+  if (payload.founders_claim_body !== undefined) updatePayload.founders_claim_body = payload.founders_claim_body
+  const { error } = await supabase
+    .from("public_sales_pages")
+    .update(updatePayload)
+    .eq("slug", "founders")
+  if (error) return { success: false, error: error.message }
+  return { success: true }
+}
+
+export async function updateFoundersFaq(payload: {
+  founders_faq: { question: string; answer: string }[] | null
+}): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+  const supabase = createServiceRoleClient()
+  const { error } = await supabase
+    .from("public_sales_pages")
+    .update({
+      founders_faq: payload.founders_faq,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("slug", "founders")
+  if (error) return { success: false, error: error.message }
+  return { success: true }
 }

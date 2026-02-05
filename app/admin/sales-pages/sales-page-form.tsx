@@ -9,6 +9,11 @@ import {
   updateSalesPageVisibility,
   updateSalesPagePlans,
   uploadSalesPageImage,
+  updateFoundersAvailability,
+  updateFoundersInviteSection,
+  updateFoundersComparisonSection,
+  updateFoundersClaimSection,
+  updateFoundersFaq,
   type SalesPageType,
   type ActivePlanForSalesPage,
   type SalesPageRow,
@@ -63,6 +68,23 @@ export function SalesPageForm({
   const [isSavingEducationSection, setIsSavingEducationSection] = useState(false)
   const [isSavingVisibility, setIsSavingVisibility] = useState(false)
   const [isSavingPlans, setIsSavingPlans] = useState(false)
+  const [foundersSpotsAvailable, setFoundersSpotsAvailable] = useState<number | "">("")
+  const [foundersInviteHeadline, setFoundersInviteHeadline] = useState("")
+  const [foundersInviteBody, setFoundersInviteBody] = useState("")
+  const [foundersInviteMediaUrl, setFoundersInviteMediaUrl] = useState("")
+  const [foundersInviteMediaType, setFoundersInviteMediaType] = useState<"image" | "video">("image")
+  const [foundersComparisonHeadline, setFoundersComparisonHeadline] = useState("")
+  const [foundersComparisonSubhead, setFoundersComparisonSubhead] = useState("")
+  const [foundersPriceLifetime, setFoundersPriceLifetime] = useState<number | "">("")
+  const [foundersPriceComparisonMonthly, setFoundersPriceComparisonMonthly] = useState<number | "">("")
+  const [foundersClaimHeadline, setFoundersClaimHeadline] = useState("")
+  const [foundersClaimBody, setFoundersClaimBody] = useState("")
+  const [foundersFaq, setFoundersFaq] = useState<{ question: string; answer: string }[]>([])
+  const [isSavingFoundersAvailability, setIsSavingFoundersAvailability] = useState(false)
+  const [isSavingFoundersInvite, setIsSavingFoundersInvite] = useState(false)
+  const [isSavingFoundersComparison, setIsSavingFoundersComparison] = useState(false)
+  const [isSavingFoundersClaim, setIsSavingFoundersClaim] = useState(false)
+  const [isSavingFoundersFaq, setIsSavingFoundersFaq] = useState(false)
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
   const [isUploadingCommunityVisionImage, setIsUploadingCommunityVisionImage] = useState(false)
@@ -92,6 +114,18 @@ export function SalesPageForm({
       setMembershipHeadline("")
       setMembershipIntro("")
       setSelectedPlanIds([])
+      setFoundersSpotsAvailable("")
+      setFoundersInviteHeadline("")
+      setFoundersInviteBody("")
+      setFoundersInviteMediaUrl("")
+      setFoundersInviteMediaType("image")
+      setFoundersComparisonHeadline("")
+      setFoundersComparisonSubhead("")
+      setFoundersPriceLifetime("")
+      setFoundersPriceComparisonMonthly("")
+      setFoundersClaimHeadline("")
+      setFoundersClaimBody("")
+      setFoundersFaq([])
       return
     }
     setHeroLogoUrl(row.logo_url ?? "")
@@ -110,6 +144,22 @@ export function SalesPageForm({
     setMembershipHeadline(row.membership_headline ?? "")
     setMembershipIntro(row.membership_intro ?? "")
     setSelectedPlanIds(Array.isArray(row.selected_plan_ids) ? row.selected_plan_ids : [])
+    setFoundersSpotsAvailable(row.founders_spots_available ?? "")
+    setFoundersInviteHeadline(row.founders_invite_headline ?? "")
+    setFoundersInviteBody(row.founders_invite_body ?? "")
+    setFoundersInviteMediaUrl(row.founders_invite_media_url ?? "")
+    setFoundersInviteMediaType(row.founders_invite_media_type === "video" ? "video" : "image")
+    setFoundersComparisonHeadline(row.founders_comparison_headline ?? "")
+    setFoundersComparisonSubhead(row.founders_comparison_subhead ?? "")
+    setFoundersPriceLifetime(row.founders_price_lifetime ?? "")
+    setFoundersPriceComparisonMonthly(row.founders_price_comparison_monthly ?? "")
+    setFoundersClaimHeadline(row.founders_claim_headline ?? "")
+    setFoundersClaimBody(row.founders_claim_body ?? "")
+    setFoundersFaq(
+      Array.isArray(row.founders_faq) && row.founders_faq.every((x) => x && typeof x.question === "string" && typeof x.answer === "string")
+        ? row.founders_faq
+        : []
+    )
   }
 
   useEffect(() => {
@@ -264,6 +314,71 @@ export function SalesPageForm({
     }
     setIsSavingPlans(false)
   }
+
+  const handleSaveFoundersAvailability = async () => {
+    setIsSavingFoundersAvailability(true)
+    const result = await updateFoundersAvailability({
+      founders_spots_available: foundersSpotsAvailable === "" ? null : Number(foundersSpotsAvailable),
+    })
+    if (result.success) showToast("Founders availability saved.", "success")
+    else showToast(result.error ?? "Failed to save.", "error")
+    setIsSavingFoundersAvailability(false)
+  }
+
+  const handleSaveFoundersInvite = async () => {
+    setIsSavingFoundersInvite(true)
+    const result = await updateFoundersInviteSection({
+      founders_invite_headline: foundersInviteHeadline || null,
+      founders_invite_body: foundersInviteBody || null,
+      founders_invite_media_url: foundersInviteMediaUrl || null,
+      founders_invite_media_type: foundersInviteMediaType,
+    })
+    if (result.success) showToast("Founders invite section saved.", "success")
+    else showToast(result.error ?? "Failed to save.", "error")
+    setIsSavingFoundersInvite(false)
+  }
+
+  const handleSaveFoundersComparison = async () => {
+    setIsSavingFoundersComparison(true)
+    const result = await updateFoundersComparisonSection({
+      founders_comparison_headline: foundersComparisonHeadline || null,
+      founders_comparison_subhead: foundersComparisonSubhead || null,
+      founders_price_lifetime: foundersPriceLifetime === "" ? null : Number(foundersPriceLifetime),
+      founders_price_comparison_monthly: foundersPriceComparisonMonthly === "" ? null : Number(foundersPriceComparisonMonthly),
+    })
+    if (result.success) showToast("Founders comparison section saved.", "success")
+    else showToast(result.error ?? "Failed to save.", "error")
+    setIsSavingFoundersComparison(false)
+  }
+
+  const handleSaveFoundersClaim = async () => {
+    setIsSavingFoundersClaim(true)
+    const result = await updateFoundersClaimSection({
+      founders_claim_headline: foundersClaimHeadline || null,
+      founders_claim_body: foundersClaimBody || null,
+    })
+    if (result.success) showToast("Founders claim section saved.", "success")
+    else showToast(result.error ?? "Failed to save.", "error")
+    setIsSavingFoundersClaim(false)
+  }
+
+  const handleSaveFoundersFaq = async () => {
+    setIsSavingFoundersFaq(true)
+    const result = await updateFoundersFaq({ founders_faq: foundersFaq.length ? foundersFaq : null })
+    if (result.success) showToast("Founders FAQ saved.", "success")
+    else showToast(result.error ?? "Failed to save.", "error")
+    setIsSavingFoundersFaq(false)
+  }
+
+  const addFoundersFaqItem = () => setFoundersFaq((prev) => [...prev, { question: "", answer: "" }])
+  const removeFoundersFaqItem = (index: number) =>
+    setFoundersFaq((prev) => prev.filter((_, i) => i !== index))
+  const setFoundersFaqItem = (index: number, field: "question" | "answer", value: string) =>
+    setFoundersFaq((prev) => {
+      const next = [...prev]
+      if (next[index]) next[index] = { ...next[index], [field]: value }
+      return next
+    })
 
   if (isLoading) {
     return (
@@ -782,6 +897,281 @@ export function SalesPageForm({
           </button>
         </div>
       </section>
+
+      {pageType === "founders" && (
+        <>
+          {/* Founders Availability */}
+          <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Founders Availability</h3>
+            <div>
+              <label
+                htmlFor="founders-spots-available"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Spots available
+              </label>
+              <input
+                type="number"
+                id="founders-spots-available"
+                min={0}
+                value={foundersSpotsAvailable === "" ? "" : foundersSpotsAvailable}
+                onChange={(e) =>
+                  setFoundersSpotsAvailable(e.target.value === "" ? "" : parseInt(e.target.value, 10) || "")
+                }
+                placeholder="e.g. 50"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleSaveFoundersAvailability}
+                disabled={isSavingFoundersAvailability}
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingFoundersAvailability ? "Saving…" : "Save Availability"}
+              </button>
+            </div>
+          </section>
+
+          {/* Founders Invite Section */}
+          <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Founders Invite Section</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="founders-invite-headline" className="block text-sm font-medium text-gray-700 mb-2">
+                  Headline
+                </label>
+                <input
+                  type="text"
+                  id="founders-invite-headline"
+                  value={foundersInviteHeadline}
+                  onChange={(e) => setFoundersInviteHeadline(e.target.value)}
+                  placeholder="Invite headline"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label htmlFor="founders-invite-body" className="block text-sm font-medium text-gray-700 mb-2">
+                  Body
+                </label>
+                <textarea
+                  id="founders-invite-body"
+                  rows={4}
+                  value={foundersInviteBody}
+                  onChange={(e) => setFoundersInviteBody(e.target.value)}
+                  placeholder="Invite body text"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Media type</label>
+                <select
+                  value={foundersInviteMediaType}
+                  onChange={(e) => setFoundersInviteMediaType(e.target.value as "image" | "video")}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="founders-invite-media-url" className="block text-sm font-medium text-gray-700 mb-2">
+                  Media URL
+                </label>
+                <input
+                  type="text"
+                  id="founders-invite-media-url"
+                  value={foundersInviteMediaUrl}
+                  onChange={(e) => setFoundersInviteMediaUrl(e.target.value)}
+                  placeholder="https://…"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleSaveFoundersInvite}
+                disabled={isSavingFoundersInvite}
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingFoundersInvite ? "Saving…" : "Save Invite Section"}
+              </button>
+            </div>
+          </section>
+
+          {/* Founders Comparison Section */}
+          <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Founders Comparison Section</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="founders-comparison-headline" className="block text-sm font-medium text-gray-700 mb-2">
+                  Headline
+                </label>
+                <input
+                  type="text"
+                  id="founders-comparison-headline"
+                  value={foundersComparisonHeadline}
+                  onChange={(e) => setFoundersComparisonHeadline(e.target.value)}
+                  placeholder="Comparison headline"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label htmlFor="founders-comparison-subhead" className="block text-sm font-medium text-gray-700 mb-2">
+                  Subhead
+                </label>
+                <input
+                  type="text"
+                  id="founders-comparison-subhead"
+                  value={foundersComparisonSubhead}
+                  onChange={(e) => setFoundersComparisonSubhead(e.target.value)}
+                  placeholder="Comparison subhead"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label htmlFor="founders-price-lifetime" className="block text-sm font-medium text-gray-700 mb-2">
+                  Lifetime price
+                </label>
+                <input
+                  type="number"
+                  id="founders-price-lifetime"
+                  min={0}
+                  step={0.01}
+                  value={foundersPriceLifetime === "" ? "" : foundersPriceLifetime}
+                  onChange={(e) =>
+                    setFoundersPriceLifetime(e.target.value === "" ? "" : parseFloat(e.target.value) || "")
+                  }
+                  placeholder="e.g. 999"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label htmlFor="founders-price-comparison-monthly" className="block text-sm font-medium text-gray-700 mb-2">
+                  Monthly comparison price
+                </label>
+                <input
+                  type="number"
+                  id="founders-price-comparison-monthly"
+                  min={0}
+                  step={0.01}
+                  value={foundersPriceComparisonMonthly === "" ? "" : foundersPriceComparisonMonthly}
+                  onChange={(e) =>
+                    setFoundersPriceComparisonMonthly(e.target.value === "" ? "" : parseFloat(e.target.value) || "")
+                  }
+                  placeholder="e.g. 29"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleSaveFoundersComparison}
+                disabled={isSavingFoundersComparison}
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingFoundersComparison ? "Saving…" : "Save Comparison Section"}
+              </button>
+            </div>
+          </section>
+
+          {/* Founders Claim Section */}
+          <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Founders Claim Section</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="founders-claim-headline" className="block text-sm font-medium text-gray-700 mb-2">
+                  Headline
+                </label>
+                <input
+                  type="text"
+                  id="founders-claim-headline"
+                  value={foundersClaimHeadline}
+                  onChange={(e) => setFoundersClaimHeadline(e.target.value)}
+                  placeholder="Claim headline"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label htmlFor="founders-claim-body" className="block text-sm font-medium text-gray-700 mb-2">
+                  Body
+                </label>
+                <textarea
+                  id="founders-claim-body"
+                  rows={4}
+                  value={foundersClaimBody}
+                  onChange={(e) => setFoundersClaimBody(e.target.value)}
+                  placeholder="Claim body text"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleSaveFoundersClaim}
+                disabled={isSavingFoundersClaim}
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingFoundersClaim ? "Saving…" : "Save Claim Section"}
+              </button>
+            </div>
+          </section>
+
+          {/* Founders FAQ */}
+          <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Founders FAQ</h3>
+            <p className="text-sm text-gray-500 mb-4">Editable list of FAQ items. Add or remove items, then save.</p>
+            <div className="space-y-4">
+              {foundersFaq.map((item, index) => (
+                <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-2">
+                  <input
+                    type="text"
+                    value={item.question}
+                    onChange={(e) => setFoundersFaqItem(index, "question", e.target.value)}
+                    placeholder="Question"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  <textarea
+                    value={item.answer}
+                    onChange={(e) => setFoundersFaqItem(index, "answer", e.target.value)}
+                    placeholder="Answer"
+                    rows={2}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeFoundersFaqItem(index)}
+                    className="text-sm text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addFoundersFaqItem}
+                className="px-4 py-2 border border-dashed border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium"
+              >
+                Add FAQ item
+              </button>
+            </div>
+            <div className="pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleSaveFoundersFaq}
+                disabled={isSavingFoundersFaq}
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingFoundersFaq ? "Saving…" : "Save FAQ"}
+              </button>
+            </div>
+          </section>
+        </>
+      )}
 
       {toast && (
         <div
