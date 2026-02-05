@@ -64,6 +64,8 @@ export interface SalesPageRow extends SalesPageHeroRow {
   show_marketplace: boolean | null
   show_ai_mentors: boolean | null
   show_founders_bridge: boolean | null
+  membership_headline: string | null
+  membership_intro: string | null
   selected_plan_ids: string[] | null
 }
 

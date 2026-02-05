@@ -78,6 +78,12 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
   const showAiMentors = salesPage?.show_ai_mentors !== false
   const showFoundersBridge = salesPage?.show_founders_bridge !== false
 
+  const membershipHeadline =
+    salesPage?.membership_headline?.trim() ?? "Start Free. Upgrade When It Makes Sense."
+  const membershipIntro =
+    salesPage?.membership_intro?.trim() ??
+    "Everyone can join for free and immediately experience the community.\nAs your goals grow, upgrade to unlock tools that help you build your business and amplify your message."
+
   return (
     <div className="font-sans bg-white">
       {/* Header with Login */}
@@ -842,11 +848,10 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Start Free. Upgrade When It Makes Sense.
+              {membershipHeadline}
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Everyone can join for free and immediately experience the community.
-              As your goals grow, upgrade to unlock tools that help you build your business and amplify your message.
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto whitespace-pre-line">
+              {membershipIntro}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
