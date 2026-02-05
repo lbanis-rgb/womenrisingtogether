@@ -220,7 +220,11 @@ export async function getActivePlansForSalesPage(): Promise<{
 
 export async function updateSalesPagePlans(
   pageType: SalesPageType,
-  payload: { selected_plan_ids: string[] },
+  payload: {
+    selected_plan_ids: string[]
+    membership_headline?: string | null
+    membership_intro?: string | null
+  },
 ): Promise<{ success: boolean; error?: string }> {
   const { authorized, error: authError } = await verifyAdminAccess()
   if (!authorized) {
@@ -229,12 +233,18 @@ export async function updateSalesPagePlans(
 
   const supabase = createServiceRoleClient()
 
+  const updatePayload: Record<string, unknown> = {
+    selected_plan_ids: payload.selected_plan_ids,
+    updated_at: new Date().toISOString(),
+  }
+  if (payload.membership_headline !== undefined)
+    updatePayload.membership_headline = payload.membership_headline ?? null
+  if (payload.membership_intro !== undefined)
+    updatePayload.membership_intro = payload.membership_intro ?? null
+
   const { error } = await supabase
     .from("public_sales_pages")
-    .update({
-      selected_plan_ids: payload.selected_plan_ids,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("slug", "home")
 
   if (error) {

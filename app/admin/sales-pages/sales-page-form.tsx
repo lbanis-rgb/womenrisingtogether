@@ -52,6 +52,8 @@ export function SalesPageForm({
   const [showMarketplaceSection, setShowMarketplaceSection] = useState(true)
   const [showAiMentorsSection, setShowAiMentorsSection] = useState(true)
   const [showFoundersCtaSection, setShowFoundersCtaSection] = useState(true)
+  const [membershipHeadline, setMembershipHeadline] = useState("")
+  const [membershipIntro, setMembershipIntro] = useState("")
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([])
   const [activePlans, setActivePlans] = useState<ActivePlanForSalesPage[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -86,6 +88,8 @@ export function SalesPageForm({
       setShowMarketplaceSection(true)
       setShowAiMentorsSection(true)
       setShowFoundersCtaSection(true)
+      setMembershipHeadline("")
+      setMembershipIntro("")
       setSelectedPlanIds([])
       return
     }
@@ -102,6 +106,8 @@ export function SalesPageForm({
     setShowMarketplaceSection(row.show_marketplace ?? true)
     setShowAiMentorsSection(row.show_ai_mentors ?? true)
     setShowFoundersCtaSection(row.show_founders_bridge ?? true)
+    setMembershipHeadline(row.membership_headline ?? "")
+    setMembershipIntro(row.membership_intro ?? "")
     setSelectedPlanIds(Array.isArray(row.selected_plan_ids) ? row.selected_plan_ids : [])
   }
 
@@ -292,7 +298,11 @@ export function SalesPageForm({
 
   const handleSavePlans = async () => {
     setIsSavingPlans(true)
-    const result = await updateSalesPagePlans(pageType, { selected_plan_ids: selectedPlanIds })
+    const result = await updateSalesPagePlans(pageType, {
+      selected_plan_ids: selectedPlanIds,
+      membership_headline: membershipHeadline || null,
+      membership_intro: membershipIntro || null,
+    })
     if (result.success) {
       showToast("Plans saved.", "success")
     } else {
@@ -723,6 +733,43 @@ export function SalesPageForm({
       {/* Plans Displayed on This Page */}
       <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Plans Displayed on This Page</h3>
+
+        <div className="space-y-4 pb-6 border-b border-gray-200">
+          <div>
+            <label
+              htmlFor="membership-headline"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Membership Section Headline
+            </label>
+            <input
+              type="text"
+              id="membership-headline"
+              value={membershipHeadline}
+              onChange={(e) => setMembershipHeadline(e.target.value)}
+              placeholder="e.g. Start Free. Upgrade When It Makes Sense."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="membership-intro"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Membership Section Intro
+            </label>
+            <textarea
+              id="membership-intro"
+              name="membership_intro"
+              rows={4}
+              value={membershipIntro}
+              onChange={(e) => setMembershipIntro(e.target.value)}
+              placeholder="Short paragraph shown above the plan cards. Line breaks are preserved."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[100px] whitespace-pre-wrap"
+            />
+          </div>
+        </div>
+
         <p className="text-sm text-gray-500 mb-4">
           Choose which plans appear on this sales page. Order reflects selection order.
         </p>
