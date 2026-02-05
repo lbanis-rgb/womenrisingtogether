@@ -59,6 +59,11 @@ export interface SalesPageRow extends SalesPageHeroRow {
   community_vision_image_url: string | null
   community_vision_body: string | null
   community_vision_bullets: string[] | null
+  education_section_headline: string | null
+  show_courses_section: boolean | null
+  show_marketplace_section: boolean | null
+  show_ai_mentors_section: boolean | null
+  show_founders_cta_section: boolean | null
 }
 
 export async function getSalesPageByPageType(
@@ -74,7 +79,7 @@ export async function getSalesPageByPageType(
   const { data, error } = await supabase
     .from("sales_pages")
     .select(
-      "hero_logo_url, hero_headline, hero_intro_text, hero_image_url, community_vision_headline, community_vision_image_url, community_vision_body, community_vision_bullets",
+      "hero_logo_url, hero_headline, hero_intro_text, hero_image_url, community_vision_headline, community_vision_image_url, community_vision_body, community_vision_bullets, education_section_headline, show_courses_section, show_marketplace_section, show_ai_mentors_section, show_founders_cta_section",
     )
     .eq("page_type", pageType)
     .maybeSingle()
@@ -115,6 +120,77 @@ export async function updateSalesPageCommunityVision(
     updatePayload.community_vision_body = payload.community_vision_body
   if (payload.community_vision_bullets !== undefined)
     updatePayload.community_vision_bullets = payload.community_vision_bullets
+
+  const { error } = await supabase
+    .from("sales_pages")
+    .update(updatePayload)
+    .eq("page_type", pageType)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+export async function updateSalesPageEducationSection(
+  pageType: SalesPageType,
+  payload: { education_section_headline?: string | null },
+): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+
+  const supabase = createServiceRoleClient()
+
+  const updatePayload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  }
+  if (payload.education_section_headline !== undefined)
+    updatePayload.education_section_headline = payload.education_section_headline
+
+  const { error } = await supabase
+    .from("sales_pages")
+    .update(updatePayload)
+    .eq("page_type", pageType)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+export interface UpdateSalesPageVisibilityPayload {
+  show_courses_section?: boolean
+  show_marketplace_section?: boolean
+  show_ai_mentors_section?: boolean
+  show_founders_cta_section?: boolean
+}
+
+export async function updateSalesPageVisibility(
+  pageType: SalesPageType,
+  payload: UpdateSalesPageVisibilityPayload,
+): Promise<{ success: boolean; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+
+  const supabase = createServiceRoleClient()
+
+  const updatePayload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  }
+  if (payload.show_courses_section !== undefined)
+    updatePayload.show_courses_section = payload.show_courses_section
+  if (payload.show_marketplace_section !== undefined)
+    updatePayload.show_marketplace_section = payload.show_marketplace_section
+  if (payload.show_ai_mentors_section !== undefined)
+    updatePayload.show_ai_mentors_section = payload.show_ai_mentors_section
+  if (payload.show_founders_cta_section !== undefined)
+    updatePayload.show_founders_cta_section = payload.show_founders_cta_section
 
   const { error } = await supabase
     .from("sales_pages")

@@ -7,6 +7,8 @@ import {
   getSalesPageByPageType,
   updateSalesPageHero,
   updateSalesPageCommunityVision,
+  updateSalesPageEducationSection,
+  updateSalesPageVisibility,
   type SalesPageType,
 } from "./sales-page-actions"
 
@@ -27,9 +29,16 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const [communityVisionImageUrl, setCommunityVisionImageUrl] = useState("")
   const [communityVisionBody, setCommunityVisionBody] = useState("")
   const [communityVisionBullets, setCommunityVisionBullets] = useState<string[]>([])
+  const [educationSectionHeadline, setEducationSectionHeadline] = useState("")
+  const [showCoursesSection, setShowCoursesSection] = useState(true)
+  const [showMarketplaceSection, setShowMarketplaceSection] = useState(true)
+  const [showAiMentorsSection, setShowAiMentorsSection] = useState(true)
+  const [showFoundersCtaSection, setShowFoundersCtaSection] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isSavingCommunityVision, setIsSavingCommunityVision] = useState(false)
+  const [isSavingEducationSection, setIsSavingEducationSection] = useState(false)
+  const [isSavingVisibility, setIsSavingVisibility] = useState(false)
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false)
   const [isUploadingCommunityVisionImage, setIsUploadingCommunityVisionImage] = useState(false)
@@ -54,6 +63,11 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
         setCommunityVisionBullets(
           Array.isArray(result.data.community_vision_bullets) ? result.data.community_vision_bullets : [],
         )
+        setEducationSectionHeadline(result.data.education_section_headline ?? "")
+        setShowCoursesSection(result.data.show_courses_section ?? true)
+        setShowMarketplaceSection(result.data.show_marketplace_section ?? true)
+        setShowAiMentorsSection(result.data.show_ai_mentors_section ?? true)
+        setShowFoundersCtaSection(result.data.show_founders_cta_section ?? true)
       }
       setIsLoading(false)
     }
@@ -167,6 +181,35 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
       next[index] = value
       return next
     })
+
+  const handleSaveEducationSection = async () => {
+    setIsSavingEducationSection(true)
+    const result = await updateSalesPageEducationSection(pageType, {
+      education_section_headline: educationSectionHeadline || null,
+    })
+    if (result.success) {
+      showToast("Education section saved.", "success")
+    } else {
+      showToast(result.error ?? "Failed to save.", "error")
+    }
+    setIsSavingEducationSection(false)
+  }
+
+  const handleSaveVisibility = async () => {
+    setIsSavingVisibility(true)
+    const result = await updateSalesPageVisibility(pageType, {
+      show_courses_section: showCoursesSection,
+      show_marketplace_section: showMarketplaceSection,
+      show_ai_mentors_section: showAiMentorsSection,
+      show_founders_cta_section: showFoundersCtaSection,
+    })
+    if (result.success) {
+      showToast("Section visibility saved.", "success")
+    } else {
+      showToast(result.error ?? "Failed to save.", "error")
+    }
+    setIsSavingVisibility(false)
+  }
 
   if (isLoading) {
     return (
@@ -418,6 +461,141 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSavingCommunityVision ? "Saving…" : "Save Community Vision"}
+          </button>
+        </div>
+      </section>
+
+      {/* Education Section */}
+      <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Education Section</h3>
+        <div>
+          <label
+            htmlFor="education-section-headline"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Education Section Headline
+          </label>
+          <input
+            type="text"
+            id="education-section-headline"
+            value={educationSectionHeadline}
+            onChange={(e) => setEducationSectionHeadline(e.target.value)}
+            placeholder="Enter education section headline"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div className="pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleSaveEducationSection}
+            disabled={isSavingEducationSection}
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingEducationSection ? "Saving…" : "Save Education Section"}
+          </button>
+        </div>
+      </section>
+
+      {/* Section Visibility */}
+      <section className="mt-10 pt-10 border-t border-gray-200 space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Section Visibility</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Control which sections appear on this sales page. Toggles apply per page.
+        </p>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-gray-100">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Show Courses Section</p>
+              <p className="text-xs text-gray-500 mt-0.5">Display the courses/education block on the page.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showCoursesSection}
+              onClick={() => setShowCoursesSection((prev) => !prev)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                showCoursesSection ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  showCoursesSection ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-gray-100">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Show Marketplace / Offers Section</p>
+              <p className="text-xs text-gray-500 mt-0.5">Display products and offers on the page.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showMarketplaceSection}
+              onClick={() => setShowMarketplaceSection((prev) => !prev)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                showMarketplaceSection ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  showMarketplaceSection ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-gray-100">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Show AI Mentors Section</p>
+              <p className="text-xs text-gray-500 mt-0.5">Display the AI mentors block on the page.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showAiMentorsSection}
+              onClick={() => setShowAiMentorsSection((prev) => !prev)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                showAiMentorsSection ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  showAiMentorsSection ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3 border-b border-gray-100">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Show Founders CTA Section</p>
+              <p className="text-xs text-gray-500 mt-0.5">Display the founders call-to-action block on the page.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showFoundersCtaSection}
+              onClick={() => setShowFoundersCtaSection((prev) => !prev)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                showFoundersCtaSection ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  showFoundersCtaSection ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+        <div className="pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleSaveVisibility}
+            disabled={isSavingVisibility}
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingVisibility ? "Saving…" : "Save Section Visibility"}
           </button>
         </div>
       </section>
