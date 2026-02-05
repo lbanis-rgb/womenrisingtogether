@@ -22,11 +22,13 @@ import {
   IcSupport,
   IcTools,
   IcExperts,
+  IcSalesPages,
 } from "./icons"
 
 const iconMap: Record<string, React.ComponentType> = {
   dashboard: IcDashboard,
   settings: IcSettings,
+  "sales-pages": IcSalesPages,
   members: IcMembers,
   plans: IcPlans,
   tools: IcTools,
