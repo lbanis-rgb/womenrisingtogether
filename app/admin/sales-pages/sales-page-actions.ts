@@ -50,7 +50,7 @@ async function verifyAdminAccess(): Promise<{ authorized: boolean; error: string
 export interface SalesPageHeroRow {
   logo_url: string | null
   hero_headline: string | null
-  hero_intro: string | null
+  hero_intro_text: string | null
   hero_image_url: string | null
 }
 
@@ -67,10 +67,9 @@ export interface SalesPageRow extends SalesPageHeroRow {
 }
 
 export interface UpdateSalesPageCommunityVisionPayload {
-  community_vision_headline?: string | null
-  community_vision_image_url?: string | null
-  community_vision_body?: string | null
-  community_vision_bullets?: string[] | null
+  vision_headline?: string | null
+  vision_image_url?: string | null
+  vision_who_for_bullets?: string[] | null
 }
 
 export async function updateSalesPageCommunityVision(
@@ -87,14 +86,12 @@ export async function updateSalesPageCommunityVision(
   const updatePayload: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
-  if (payload.community_vision_headline !== undefined)
-    updatePayload.community_vision_headline = payload.community_vision_headline
-  if (payload.community_vision_image_url !== undefined)
-    updatePayload.community_vision_image_url = payload.community_vision_image_url
-  if (payload.community_vision_body !== undefined)
-    updatePayload.community_vision_body = payload.community_vision_body
-  if (payload.community_vision_bullets !== undefined)
-    updatePayload.community_vision_bullets = payload.community_vision_bullets
+  if (payload.vision_headline !== undefined)
+    updatePayload.vision_headline = payload.vision_headline
+  if (payload.vision_image_url !== undefined)
+    updatePayload.vision_image_url = payload.vision_image_url
+  if (payload.vision_who_for_bullets !== undefined)
+    updatePayload.vision_who_for_bullets = payload.vision_who_for_bullets
 
   const { error } = await supabase
     .from("public_sales_pages")
@@ -110,7 +107,7 @@ export async function updateSalesPageCommunityVision(
 
 export async function updateSalesPageEducationSection(
   pageType: SalesPageType,
-  payload: { education_section_headline?: string | null },
+  payload: { education_headline?: string | null },
 ): Promise<{ success: boolean; error?: string }> {
   const { authorized, error: authError } = await verifyAdminAccess()
   if (!authorized) {
@@ -122,8 +119,8 @@ export async function updateSalesPageEducationSection(
   const updatePayload: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
-  if (payload.education_section_headline !== undefined)
-    updatePayload.education_section_headline = payload.education_section_headline
+  if (payload.education_headline !== undefined)
+    updatePayload.education_headline = payload.education_headline
 
   const { error } = await supabase
     .from("public_sales_pages")
@@ -138,10 +135,10 @@ export async function updateSalesPageEducationSection(
 }
 
 export interface UpdateSalesPageVisibilityPayload {
-  show_courses_section?: boolean
-  show_marketplace_section?: boolean
-  show_ai_mentors_section?: boolean
-  show_founders_cta_section?: boolean
+  show_courses?: boolean
+  show_marketplace?: boolean
+  show_ai_mentors?: boolean
+  show_founders_bridge?: boolean
 }
 
 export async function updateSalesPageVisibility(
@@ -158,14 +155,14 @@ export async function updateSalesPageVisibility(
   const updatePayload: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
-  if (payload.show_courses_section !== undefined)
-    updatePayload.show_courses_section = payload.show_courses_section
-  if (payload.show_marketplace_section !== undefined)
-    updatePayload.show_marketplace_section = payload.show_marketplace_section
-  if (payload.show_ai_mentors_section !== undefined)
-    updatePayload.show_ai_mentors_section = payload.show_ai_mentors_section
-  if (payload.show_founders_cta_section !== undefined)
-    updatePayload.show_founders_cta_section = payload.show_founders_cta_section
+  if (payload.show_courses !== undefined)
+    updatePayload.show_courses = payload.show_courses
+  if (payload.show_marketplace !== undefined)
+    updatePayload.show_marketplace = payload.show_marketplace
+  if (payload.show_ai_mentors !== undefined)
+    updatePayload.show_ai_mentors = payload.show_ai_mentors
+  if (payload.show_founders_bridge !== undefined)
+    updatePayload.show_founders_bridge = payload.show_founders_bridge
 
   const { error } = await supabase
     .from("public_sales_pages")
@@ -242,7 +239,7 @@ export async function updateSalesPagePlans(
 }
 
 export interface UpdateSalesPageHeroPayload {
-  hero_logo_url?: string | null
+  logo_url?: string | null
   hero_headline?: string | null
   hero_intro_text?: string | null
   hero_image_url?: string | null
@@ -263,7 +260,7 @@ export async function updateSalesPageHero(
     page_type: pageType,
     updated_at: new Date().toISOString(),
   }
-  if (payload.hero_logo_url !== undefined) updatePayload.hero_logo_url = payload.hero_logo_url
+  if (payload.logo_url !== undefined) updatePayload.logo_url = payload.logo_url
   if (payload.hero_headline !== undefined) updatePayload.hero_headline = payload.hero_headline
   if (payload.hero_intro_text !== undefined) updatePayload.hero_intro_text = payload.hero_intro_text
   if (payload.hero_image_url !== undefined) updatePayload.hero_image_url = payload.hero_image_url

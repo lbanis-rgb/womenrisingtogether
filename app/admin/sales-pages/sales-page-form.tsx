@@ -75,7 +75,7 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
     }
     setHeroLogoUrl(row.logo_url ?? "")
     setHeroHeadline(row.hero_headline ?? "")
-    setHeroIntroText(row.hero_intro ?? "")
+    setHeroIntroText(row.hero_intro_text ?? "")
     setHeroImageUrl(row.hero_image_url ?? "")
     setCommunityVisionHeadline(row.vision_headline ?? "")
     setCommunityVisionImageUrl(row.vision_image_url ?? "")
@@ -200,7 +200,7 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const handleSave = async () => {
     setIsSaving(true)
     const result = await updateSalesPageHero(pageType, {
-      hero_logo_url: heroLogoUrl || null,
+      logo_url: heroLogoUrl || null,
       hero_headline: heroHeadline || null,
       hero_intro_text: heroIntroText || null,
       hero_image_url: heroImageUrl || null,
@@ -216,10 +216,9 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const handleSaveCommunityVision = async () => {
     setIsSavingCommunityVision(true)
     const result = await updateSalesPageCommunityVision(pageType, {
-      community_vision_headline: communityVisionHeadline || null,
-      community_vision_image_url: communityVisionImageUrl || null,
-      community_vision_body: communityVisionBody || null,
-      community_vision_bullets: communityVisionBullets.length ? communityVisionBullets : null,
+      vision_headline: communityVisionHeadline || null,
+      vision_image_url: communityVisionImageUrl || null,
+      vision_who_for_bullets: communityVisionBullets.length ? communityVisionBullets : null,
     })
     if (result.success) {
       showToast("Community Vision saved.", "success")
@@ -242,7 +241,7 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const handleSaveEducationSection = async () => {
     setIsSavingEducationSection(true)
     const result = await updateSalesPageEducationSection(pageType, {
-      education_section_headline: educationSectionHeadline || null,
+      education_headline: educationSectionHeadline || null,
     })
     if (result.success) {
       showToast("Education section saved.", "success")
@@ -255,10 +254,10 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
   const handleSaveVisibility = async () => {
     setIsSavingVisibility(true)
     const result = await updateSalesPageVisibility(pageType, {
-      show_courses_section: showCoursesSection,
-      show_marketplace_section: showMarketplaceSection,
-      show_ai_mentors_section: showAiMentorsSection,
-      show_founders_cta_section: showFoundersCtaSection,
+      show_courses: showCoursesSection,
+      show_marketplace: showMarketplaceSection,
+      show_ai_mentors: showAiMentorsSection,
+      show_founders_bridge: showFoundersCtaSection,
     })
     if (result.success) {
       showToast("Section visibility saved.", "success")
