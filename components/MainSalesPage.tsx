@@ -62,10 +62,13 @@ const VISION_DEFAULT_BODY = (
 export function MainSalesPage({
   salesPage,
   orderedPlans = [],
+  stopAfterSection,
 }: {
   salesPage?: SalesPageRow | null
   orderedPlans?: ActivePlanForSalesPage[]
+  stopAfterSection?: "salesy"
 }) {
+  const stopAfterSalesy = stopAfterSection === "salesy"
   const logoUrl = salesPage?.logo_url ?? process.env.NEXT_PUBLIC_BRAND_LOGO_URL
 
   const visionHeadline = salesPage?.vision_headline ?? VISION_DEFAULT_HEADLINE
@@ -777,6 +780,8 @@ export function MainSalesPage({
         </>
       )}
 
+      {!stopAfterSalesy && (
+      <>
       {showAiMentors && (
         <>
       {/* AI Mentors Section */}
@@ -1037,6 +1042,8 @@ export function MainSalesPage({
           </div>
         </div>
       </footer>
+      </>
+      )}
     </div>
   )
 }

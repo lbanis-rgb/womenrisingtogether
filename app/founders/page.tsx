@@ -67,7 +67,11 @@ export default async function FoundersPage() {
 
   return (
     <>
-      <MainSalesPage salesPage={founders} orderedPlans={orderedFoundersPlans as ActivePlanForSalesPage[]} />
+      <MainSalesPage
+        salesPage={founders}
+        orderedPlans={orderedFoundersPlans as ActivePlanForSalesPage[]}
+        stopAfterSection="salesy"
+      />
 
       {/* Invitation Section */}
       <section id="invitation" className="py-24 px-6 bg-gradient-to-br from-brand-500 to-brand-700 text-white">
