@@ -26,7 +26,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { MainSalesPage } from "@/components/MainSalesPage"
 
 const SECTION_HEADERS: Record<"main" | "founders", string> = {
   main: "Main Sales Page Settings",
@@ -409,11 +408,15 @@ export function SalesPageForm({
           <DialogHeader>
             <DialogTitle>Sales Page Preview</DialogTitle>
             <DialogDescription>
-              Full sales page as rendered on the public "/" route.
+              Full sales page as rendered on the public &quot;{pageType === "founders" ? "/founders" : "/"}&quot; route.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto w-full -mx-6 px-6">
-            <MainSalesPage salesPage={salesPage ?? null} orderedPlans={orderedPlans} />
+            <iframe
+              src={pageType === "founders" ? "/founders" : "/"}
+              title="Sales page preview"
+              className="w-full min-h-[80vh] border-0 rounded-lg"
+            />
           </div>
         </DialogContent>
       </Dialog>
