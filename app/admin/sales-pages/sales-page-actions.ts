@@ -123,7 +123,7 @@ export async function updateSalesPageCommunityVision(
     updatePayload.community_vision_bullets = payload.community_vision_bullets
 
   const { error } = await supabase
-    .from("sales_pages")
+    .from("public_sales_pages")
     .update(updatePayload)
     .eq("page_type", pageType)
 
@@ -152,7 +152,7 @@ export async function updateSalesPageEducationSection(
     updatePayload.education_section_headline = payload.education_section_headline
 
   const { error } = await supabase
-    .from("sales_pages")
+    .from("public_sales_pages")
     .update(updatePayload)
     .eq("page_type", pageType)
 
@@ -194,7 +194,7 @@ export async function updateSalesPageVisibility(
     updatePayload.show_founders_cta_section = payload.show_founders_cta_section
 
   const { error } = await supabase
-    .from("sales_pages")
+    .from("public_sales_pages")
     .update(updatePayload)
     .eq("page_type", pageType)
 
@@ -253,7 +253,7 @@ export async function updateSalesPagePlans(
   const supabase = createServiceRoleClient()
 
   const { error } = await supabase
-    .from("sales_pages")
+    .from("public_sales_pages")
     .update({
       selected_plan_ids: payload.selected_plan_ids,
       updated_at: new Date().toISOString(),
@@ -295,7 +295,7 @@ export async function updateSalesPageHero(
   if (payload.hero_image_url !== undefined) updatePayload.hero_image_url = payload.hero_image_url
 
   const { error } = await supabase
-    .from("sales_pages")
+    .from("public_sales_pages")
     .upsert(updatePayload, { onConflict: "page_type" })
 
   if (error) {
