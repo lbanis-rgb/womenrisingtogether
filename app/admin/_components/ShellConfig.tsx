@@ -15,6 +15,7 @@ export const shellConfig: { brand: string; nav: ShellSection[] } = {
       title: "Management",
       items: [
         { label: "Settings", href: "/admin/settings", icon: "settings" },
+        { label: "Sales Pages", href: "/admin/sales-pages", icon: "settings" },
         { label: "Members", href: "/admin/members", icon: "members" },
         { label: "Plans", href: "/admin/plans", icon: "plans" },
         { label: "Tools", href: "/admin/tools", icon: "tools" },
