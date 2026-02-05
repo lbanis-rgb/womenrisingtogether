@@ -4,7 +4,6 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import {
-  getSalesPageByPageType,
   getActivePlansForSalesPage,
   updateSalesPageHero,
   updateSalesPageCommunityVision,
@@ -92,16 +91,35 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
 
   useEffect(() => {
     let cancelled = false
+    const supabase = getSupabaseBrowserClient()
+
     async function load() {
       setIsLoading(true)
-      const [pageResult, plansResult] = await Promise.all([
-        getSalesPageByPageType(pageType),
-        getActivePlansForSalesPage(),
-      ])
-      if (cancelled) return
-      if (pageResult.success) {
-        hydrateFormFromRow(pageResult.data ?? null)
+
+      let data: SalesPageRow | null = null
+      let error: Error | null = null
+      if (supabase) {
+        const result = await supabase
+          .from("public_sales_pages")
+          .select("*")
+          .eq("page_type", pageType)
+          .single()
+        data = result.data as SalesPageRow | null
+        error = result.error
+      } else {
+        error = new Error("Supabase client unavailable")
       }
+
+      if (cancelled) return
+      if (error) {
+        hydrateFormFromRow(null)
+        setIsLoading(false)
+        return
+      }
+      hydrateFormFromRow(data ?? null)
+
+      const plansResult = await getActivePlansForSalesPage()
+      if (cancelled) return
       if (plansResult.success && plansResult.data) {
         setActivePlans(plansResult.data)
       }

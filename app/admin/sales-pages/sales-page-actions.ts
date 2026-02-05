@@ -66,31 +66,6 @@ export interface SalesPageRow extends SalesPageHeroRow {
   selected_plan_ids: string[] | null
 }
 
-export async function getSalesPageByPageType(
-  pageType: SalesPageType,
-): Promise<{ success: boolean; data?: SalesPageRow | null; error?: string }> {
-  const { authorized, error: authError } = await verifyAdminAccess()
-  if (!authorized) {
-    return { success: false, error: authError || "Unauthorized" }
-  }
-
-  const supabase = createServiceRoleClient()
-
-  const { data, error } = await supabase
-    .from("public_sales_pages")
-    .select(
-      "logo_url, hero_headline, hero_intro, hero_image_url, vision_headline, vision_image_url, vision_who_for_bullets, education_headline, show_courses, show_marketplace, show_ai_mentors, show_founders_bridge, selected_plan_ids",
-    )
-    .eq("page_type", pageType)
-    .maybeSingle()
-
-  if (error) {
-    return { success: false, error: error.message }
-  }
-
-  return { success: true, data: data as SalesPageRow | null }
-}
-
 export interface UpdateSalesPageCommunityVisionPayload {
   community_vision_headline?: string | null
   community_vision_image_url?: string | null
