@@ -1,6 +1,9 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
-import type { SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
+import type {
+  ActivePlanForSalesPage,
+  SalesPageRow,
+} from "@/app/admin/sales-pages/sales-page-actions"
 
 /** Renders Markdown-style text (paragraphs, line breaks, **bold**, *italic*) as React nodes. No raw HTML. */
 function renderMarkdownBody(text: string): ReactNode {
@@ -55,7 +58,13 @@ const VISION_DEFAULT_BODY = (
  * No layout chrome (admin headers, editor UI). No preview-only props.
  * When `salesPage` is passed, it is used for Hero, logo, and future section mapping.
  */
-export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }) {
+export function MainSalesPage({
+  salesPage,
+  orderedPlans = [],
+}: {
+  salesPage?: SalesPageRow | null
+  orderedPlans?: ActivePlanForSalesPage[]
+}) {
   const logoUrl = salesPage?.logo_url ?? process.env.NEXT_PUBLIC_BRAND_LOGO_URL
 
   const visionHeadline = salesPage?.vision_headline ?? VISION_DEFAULT_HEADLINE
@@ -855,130 +864,65 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* FREE Plan */}
-            <div className="bg-gradient-to-br from-green-50 to-white rounded-2xl shadow-xl p-8 border-2 border-green-200 relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-semibold">Start Here</span>
-              </div>
-              <div className="text-center mb-6 pt-2">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
-                <p className="text-3xl font-bold text-gray-900">$0</p>
-              </div>
-              <p className="text-center text-brand-600 font-semibold mb-6">This plan finds you a community.</p>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-green-500 mt-1"></i>
-                  <span className="text-gray-700">Connect in the member feed</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-green-500 mt-1"></i>
-                  <span className="text-gray-700">{"Access the site's core message course"}</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-green-500 mt-1"></i>
-                  <span className="text-gray-700">Explore public groups and community events</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-green-500 mt-1"></i>
-                  <span className="text-gray-700">Access expert-created content</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-green-500 mt-1"></i>
-                  <span className="text-gray-700">Check out member products and services</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-green-500 mt-1"></i>
-                  <span className="text-gray-700">Experience an AI Mentor</span>
-                </li>
-              </ul>
-              <a
-                href="https://example.com/register"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full text-center px-8 py-4 bg-brand-600 text-white rounded-full hover:bg-brand-700 transition-all duration-200 font-semibold"
-              >
-                Create Free Account
-              </a>
-            </div>
-
-            {/* PRO Plan */}
-            <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl p-8 border border-blue-200">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">PRO</h3>
-                <p className="text-3xl font-bold text-gray-900">$29<span className="text-lg font-normal text-gray-600"> / month</span></p>
-              </div>
-              <p className="text-center text-brand-600 font-semibold mb-6">This plan helps you build your business.</p>
-              <p className="text-sm text-gray-500 mb-4 text-center">Includes everything in Free, plus:</p>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-blue-500 mt-1"></i>
-                  <span className="text-gray-700">Listing in the community directory</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-blue-500 mt-1"></i>
-                  <span className="text-gray-700">Create your own public group</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-blue-500 mt-1"></i>
-                  <span className="text-gray-700">Share your event in community events</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-blue-500 mt-1"></i>
-                  <span className="text-gray-700">Unlock additional AI Mentors every few weeks</span>
-                </li>
-              </ul>
-              <a
-                href="https://example.com/pro"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
-              >
-                Upgrade to PRO
-              </a>
-            </div>
-
-            {/* BIZ+ Plan */}
-            <div className="bg-gradient-to-br from-purple-100 to-brand-50 rounded-2xl shadow-2xl p-8 border-2 border-purple-300 relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-gradient-to-r from-purple-600 to-brand-600 text-white px-4 py-1 rounded-full text-sm font-semibold">Most Popular</span>
-              </div>
-              <div className="text-center mb-6 pt-2">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">BIZ+</h3>
-                <p className="text-3xl font-bold text-gray-900">$99<span className="text-lg font-normal text-gray-600"> / month</span></p>
-              </div>
-              <p className="text-center text-purple-700 font-semibold mb-6">This plan puts a spotlight on your message.</p>
-              <p className="text-sm text-gray-500 mb-4 text-center">Includes everything in Free + PRO, plus:</p>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-purple-600 mt-1"></i>
-                  <span className="text-gray-700">Create and run private groups</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-purple-600 mt-1"></i>
-                  <span className="text-gray-700">Create and share content in the Education section (links back to you)</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-purple-600 mt-1"></i>
-                  <span className="text-gray-700">Promote your products and services</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-purple-600 mt-1"></i>
-                  <span className="text-gray-700">Access to private leader-only events</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <i className="fa-solid fa-check text-purple-600 mt-1"></i>
-                  <span className="text-gray-700">ALL AI Mentors unlocked</span>
-                </li>
-              </ul>
-              <a
-                href="https://example.com/biz-plus"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full text-center px-8 py-4 bg-gradient-to-r from-purple-600 to-brand-600 text-white rounded-full hover:from-purple-700 hover:to-brand-700 transition-all duration-200 font-semibold shadow-lg"
-              >
-                Upgrade to BIZ+
-              </a>
-            </div>
+            {orderedPlans.map((plan) => {
+              const isPopular = plan.most_popular === true
+              const currencySymbol =
+                plan.currency === "USD" || plan.currency == null || plan.currency === ""
+                  ? "$"
+                  : plan.currency
+              const priceDisplay =
+                plan.price == null || plan.price === 0
+                  ? "$0"
+                  : `${currencySymbol}${plan.price}${plan.billing ? ` / ${plan.billing}` : ""}`
+              const features = Array.isArray(plan.features)
+                ? plan.features.filter((f): f is string => typeof f === "string" && f.trim() !== "")
+                : []
+              const ctaHref = plan.payment_url?.trim() || "#"
+              return (
+                <div
+                  key={plan.id}
+                  className={
+                    isPopular
+                      ? "bg-gradient-to-br from-purple-100 to-brand-50 rounded-2xl shadow-2xl p-8 border-2 border-purple-300 relative"
+                      : "bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl p-8 border border-blue-200"
+                  }
+                >
+                  {isPopular && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-gradient-to-r from-purple-600 to-brand-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                        Most Popular
+                      </span>
+                    </div>
+                  )}
+                  <div className={`text-center mb-6 ${isPopular ? "pt-2" : ""}`}>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                    <p className="text-3xl font-bold text-gray-900">{priceDisplay}</p>
+                  </div>
+                  <ul className="space-y-4 mb-8">
+                    {features.map((f, i) => (
+                      <li key={i} className="flex items-start space-x-3">
+                        <i
+                          className={`fa-solid fa-check mt-1 ${isPopular ? "text-purple-600" : "text-blue-500"}`}
+                        />
+                        <span className="text-gray-700">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href={ctaHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={
+                      isPopular
+                        ? "block w-full text-center px-8 py-4 bg-gradient-to-r from-purple-600 to-brand-600 text-white rounded-full hover:from-purple-700 hover:to-brand-700 transition-all duration-200 font-semibold shadow-lg"
+                        : "block w-full text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
+                    }
+                  >
+                    {plan.price == null || plan.price === 0 ? "Get Started" : `Choose ${plan.name}`}
+                  </a>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>

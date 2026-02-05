@@ -1,7 +1,10 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import type { SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
+import type {
+  ActivePlanForSalesPage,
+  SalesPageRow,
+} from "@/app/admin/sales-pages/sales-page-actions"
 
 /**
  * Load the main public sales page from public_sales_pages (slug = "home").
@@ -17,4 +20,46 @@ export async function getPublicSalesPage(): Promise<SalesPageRow | null> {
     .maybeSingle()
 
   return data as SalesPageRow | null
+}
+
+/**
+ * Load the public sales page and plans to show in the Membership section.
+ * - If selected_plan_ids is null or empty, returns all active plans (DB order).
+ * - If selected_plan_ids is set, returns only those plans in that exact order; missing IDs are skipped.
+ * Server-only; do not call from client.
+ */
+export async function getPublicSalesPageWithPlans(): Promise<{
+  salesPage: SalesPageRow | null
+  orderedPlans: ActivePlanForSalesPage[]
+}> {
+  const supabase = await createClient()
+
+  const [pageResult, plansResult] = await Promise.all([
+    supabase
+      .from("public_sales_pages")
+      .select("*")
+      .eq("slug", "home")
+      .maybeSingle(),
+    supabase
+      .from("plans")
+      .select("id, name, price, currency, billing, features, most_popular, payment_url")
+      .eq("active", true),
+  ])
+
+  const salesPage = (pageResult.data ?? null) as SalesPageRow | null
+  const allPlans = (plansResult.data ?? []) as ActivePlanForSalesPage[]
+
+  const plansById = new Map<string, ActivePlanForSalesPage>()
+  for (const p of allPlans) plansById.set(p.id, p)
+
+  const ids = salesPage?.selected_plan_ids
+  if (ids == null || ids.length === 0) {
+    return { salesPage, orderedPlans: allPlans }
+  }
+
+  const orderedPlans = ids
+    .map((id) => plansById.get(id))
+    .filter((p): p is ActivePlanForSalesPage => p != null)
+
+  return { salesPage, orderedPlans }
 }

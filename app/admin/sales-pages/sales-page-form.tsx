@@ -35,9 +35,11 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 export function SalesPageForm({
   pageType,
   salesPage,
+  orderedPlans = [],
 }: {
   pageType: SalesPageType
   salesPage?: SalesPageRow | null
+  orderedPlans?: ActivePlanForSalesPage[]
 }) {
   const [heroLogoUrl, setHeroLogoUrl] = useState("")
   const [heroHeadline, setHeroHeadline] = useState("")
@@ -344,7 +346,7 @@ export function SalesPageForm({
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto w-full -mx-6 px-6">
-            <MainSalesPage salesPage={salesPage ?? null} />
+            <MainSalesPage salesPage={salesPage ?? null} orderedPlans={orderedPlans} />
           </div>
         </DialogContent>
       </Dialog>
