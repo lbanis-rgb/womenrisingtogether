@@ -238,7 +238,7 @@ export async function sendDirectMessage(input: SendDirectMessageInput) {
   // Trigger Edge Function email (non-blocking)
   if (recipientProfile?.inbox_emails_enabled === true) {
     try {
-      await fetch("https://onvdagnymzptoilykeer.supabase.co/functions/v1/notify-inbox", {
+      await fetch(`${process.env.SUPABASE_FUNCTIONS_URL}/notify-inbox`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
