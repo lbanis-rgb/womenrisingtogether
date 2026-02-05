@@ -48,6 +48,7 @@ export function SalesPageForm({
   const [heroHeadline, setHeroHeadline] = useState("")
   const [heroIntroText, setHeroIntroText] = useState("")
   const [heroImageUrl, setHeroImageUrl] = useState("")
+  const [heroVideoUrl, setHeroVideoUrl] = useState("")
   const [communityVisionHeadline, setCommunityVisionHeadline] = useState("")
   const [communityVisionImageUrl, setCommunityVisionImageUrl] = useState("")
   const [communityVisionBody, setCommunityVisionBody] = useState("")
@@ -101,6 +102,7 @@ export function SalesPageForm({
       setHeroHeadline("")
       setHeroIntroText("")
       setHeroImageUrl("")
+      setHeroVideoUrl("")
       setCommunityVisionHeadline("")
       setCommunityVisionImageUrl("")
       setCommunityVisionBody("")
@@ -131,6 +133,7 @@ export function SalesPageForm({
     setHeroHeadline(row.hero_headline ?? "")
     setHeroIntroText(row.hero_intro_text ?? "")
     setHeroImageUrl(row.hero_image_url ?? "")
+    setHeroVideoUrl(row.hero_video_url ?? "")
     setCommunityVisionHeadline(row.vision_headline ?? "")
     setCommunityVisionImageUrl(row.vision_image_url ?? "")
     setCommunityVisionBody(row.vision_body_text ?? "")
@@ -229,6 +232,7 @@ export function SalesPageForm({
       hero_headline: heroHeadline || null,
       hero_intro_text: heroIntroText || null,
       hero_image_url: heroImageUrl || null,
+      hero_video_url: heroVideoUrl || null,
     })
     if (result.success) {
       showToast("Hero section saved.", "success")
@@ -524,6 +528,24 @@ export function SalesPageForm({
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Hero Video URL */}
+          <div>
+            <label htmlFor="hero-video-url" className="block text-sm font-medium text-gray-700 mb-2">
+              Hero Video URL
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              If a video URL is provided, it will be shown instead of the image. You can use one or the other.
+            </p>
+            <input
+              type="text"
+              id="hero-video-url"
+              value={heroVideoUrl}
+              onChange={(e) => setHeroVideoUrl(e.target.value)}
+              placeholder="https://youtube.com/… or https://vimeo.com/… or direct .mp4 URL"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
 

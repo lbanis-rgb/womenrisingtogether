@@ -56,6 +56,7 @@ export interface SalesPageHeroRow {
   hero_headline: string | null
   hero_intro_text: string | null
   hero_image_url: string | null
+  hero_video_url: string | null
 }
 
 export interface SalesPageRow extends SalesPageHeroRow {
@@ -275,6 +276,7 @@ export interface UpdateSalesPageHeroPayload {
   hero_headline?: string | null
   hero_intro_text?: string | null
   hero_image_url?: string | null
+  hero_video_url?: string | null
 }
 
 export async function updateSalesPageHero(
@@ -295,6 +297,7 @@ export async function updateSalesPageHero(
   if (payload.hero_headline !== undefined) updatePayload.hero_headline = payload.hero_headline
   if (payload.hero_intro_text !== undefined) updatePayload.hero_intro_text = payload.hero_intro_text
   if (payload.hero_image_url !== undefined) updatePayload.hero_image_url = payload.hero_image_url
+  if (payload.hero_video_url !== undefined) updatePayload.hero_video_url = payload.hero_video_url
 
   const { error } = await supabase
     .from("public_sales_pages")

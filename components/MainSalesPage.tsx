@@ -4,6 +4,7 @@ import type {
   ActivePlanForSalesPage,
   SalesPageRow,
 } from "@/app/admin/sales-pages/sales-page-actions"
+import { getHeroVideoDisplay } from "@/lib/sales-pages/heroVideo"
 
 /** Renders Markdown-style text (paragraphs, line breaks, **bold**, *italic*) as React nodes. No raw HTML. */
 function renderMarkdownBody(text: string): ReactNode {
@@ -147,14 +148,35 @@ export function MainSalesPage({
             </div>
             <div className="relative">
               <div className="bg-gradient-to-br from-brand-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden aspect-video flex items-center justify-center border border-gray-200">
-                <img
-                  src={
+                {(() => {
+                  const heroVideo = getHeroVideoDisplay(salesPage?.hero_video_url)
+                  const heroImageUrl =
                     salesPage?.hero_image_url ??
                     "https://storage.googleapis.com/uxpilot-auth.appspot.com/XPYZqTkHKUezklygXKVAtUhWQWm1%2F9299ed61-6619-432d-9f18-daad08f3cf55.png"
+                  if (heroVideo?.kind === "iframe") {
+                    return (
+                      <iframe
+                        src={heroVideo.src}
+                        title="Hero video"
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    )
                   }
-                  alt="modern community platform dashboard showing member feed, groups, and engagement metrics with clean premium interface design"
-                  className="w-full h-full object-cover"
-                />
+                  if (heroVideo?.kind === "video") {
+                    return (
+                      <video src={heroVideo.src} controls className="w-full h-full object-cover" />
+                    )
+                  }
+                  return (
+                    <img
+                      src={heroImageUrl}
+                      alt="modern community platform dashboard showing member feed, groups, and engagement metrics with clean premium interface design"
+                      className="w-full h-full object-cover"
+                    />
+                  )
+                })()}
               </div>
             </div>
           </div>
