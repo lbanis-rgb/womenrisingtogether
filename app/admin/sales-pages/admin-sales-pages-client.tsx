@@ -5,10 +5,12 @@ import { SalesPageForm } from "./sales-page-form"
 import type { ActivePlanForSalesPage, SalesPageRow } from "./sales-page-actions"
 
 export function AdminSalesPagesClient({
-  salesPage,
+  mainSalesPage,
+  foundersSalesPage,
   orderedPlans = [],
 }: {
-  salesPage: SalesPageRow | null
+  mainSalesPage: SalesPageRow | null
+  foundersSalesPage: SalesPageRow | null
   orderedPlans?: ActivePlanForSalesPage[]
 }) {
   return (
@@ -24,10 +26,10 @@ export function AdminSalesPagesClient({
             <TabsTrigger value="founders">Founders Sales Page</TabsTrigger>
           </TabsList>
           <TabsContent value="main" className="mt-6">
-            <SalesPageForm pageType="main" salesPage={salesPage} orderedPlans={orderedPlans} />
+            <SalesPageForm pageType="main" salesPage={mainSalesPage} orderedPlans={orderedPlans} />
           </TabsContent>
           <TabsContent value="founders" className="mt-6">
-            <SalesPageForm pageType="founders" />
+            <SalesPageForm pageType="founders" salesPage={foundersSalesPage} orderedPlans={orderedPlans} />
           </TabsContent>
         </Tabs>
       </div>

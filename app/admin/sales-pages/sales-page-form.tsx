@@ -2,14 +2,13 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import {
-  getActivePlansForSalesPage,
   updateSalesPageHero,
   updateSalesPageCommunityVision,
   updateSalesPageEducationSection,
   updateSalesPageVisibility,
   updateSalesPagePlans,
+  uploadSalesPageImage,
   type SalesPageType,
   type ActivePlanForSalesPage,
   type SalesPageRow,
@@ -38,7 +37,7 @@ export function SalesPageForm({
   orderedPlans = [],
 }: {
   pageType: SalesPageType
-  salesPage?: SalesPageRow | null
+  salesPage: SalesPageRow | null
   orderedPlans?: ActivePlanForSalesPage[]
 }) {
   const [heroLogoUrl, setHeroLogoUrl] = useState("")
@@ -114,46 +113,10 @@ export function SalesPageForm({
   }
 
   useEffect(() => {
-    let cancelled = false
-    const supabase = getSupabaseBrowserClient()
-
-    async function load() {
-      setIsLoading(true)
-
-      let data: SalesPageRow | null = null
-      let error: Error | null = null
-      if (supabase) {
-        const result = await supabase
-          .from("public_sales_pages")
-          .select("*")
-          .eq("slug", "home")
-          .single()
-        data = result.data as SalesPageRow | null
-        error = result.error
-      } else {
-        error = new Error("Supabase client unavailable")
-      }
-
-      if (cancelled) return
-      if (error) {
-        hydrateFormFromRow(null)
-        setIsLoading(false)
-        return
-      }
-      hydrateFormFromRow(data ?? null)
-
-      const plansResult = await getActivePlansForSalesPage()
-      if (cancelled) return
-      if (plansResult.success && plansResult.data) {
-        setActivePlans(plansResult.data)
-      }
-      setIsLoading(false)
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [pageType])
+    hydrateFormFromRow(salesPage ?? null)
+    setActivePlans(orderedPlans ?? [])
+    setIsLoading(false)
+  }, [salesPage, orderedPlans])
 
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type })
@@ -176,48 +139,37 @@ export function SalesPageForm({
       return
     }
 
-    const supabase = getSupabaseBrowserClient()
-    if (!supabase) {
-      showToast("Upload unavailable.", "error")
-      return
-    }
-
     if (kind === "logo") setIsUploadingLogo(true)
     else if (kind === "hero") setIsUploadingHeroImage(true)
     else setIsUploadingCommunityVisionImage(true)
 
-    try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"
-      const timestamp = Date.now()
-      const fileName = `sales-pages/${pageType}/${kind}-${timestamp}.${ext}`
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("kind", kind)
 
-      const { error: uploadError } = await supabase.storage
-        .from("dashboard-assets")
-        .upload(fileName, file, { upsert: true })
+    const result = await uploadSalesPageImage(pageType, formData)
 
-      if (uploadError) throw uploadError
+    if (kind === "logo") setIsUploadingLogo(false)
+    else if (kind === "hero") setIsUploadingHeroImage(false)
+    else setIsUploadingCommunityVisionImage(false)
 
-      const { data: urlData } = supabase.storage.from("dashboard-assets").getPublicUrl(fileName)
-      const publicUrl = urlData.publicUrl
-
+    if (!result.success) {
+      showToast(result.error ?? "Upload failed.", "error")
+      return
+    }
+    if (result.url) {
       if (kind === "logo") {
-        setHeroLogoUrl(publicUrl)
+        setHeroLogoUrl(result.url)
         logoInputRef.current && (logoInputRef.current.value = "")
       } else if (kind === "hero") {
-        setHeroImageUrl(publicUrl)
+        setHeroImageUrl(result.url)
         heroImageInputRef.current && (heroImageInputRef.current.value = "")
       } else {
-        setCommunityVisionImageUrl(publicUrl)
+        setCommunityVisionImageUrl(result.url)
         communityVisionImageInputRef.current && (communityVisionImageInputRef.current.value = "")
       }
       const label = kind === "logo" ? "Logo" : kind === "hero" ? "Hero image" : "Community Vision image"
       showToast(`${label} uploaded.`, "success")
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Upload failed.", "error")
-    } finally {
-      setIsUploadingLogo(false)
-      setIsUploadingHeroImage(false)
-      setIsUploadingCommunityVisionImage(false)
     }
   }
 

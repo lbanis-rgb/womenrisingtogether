@@ -63,3 +63,38 @@ export async function getPublicSalesPageWithPlans(): Promise<{
 
   return { salesPage, orderedPlans }
 }
+
+/**
+ * Load both public_sales_pages rows (slug = "home" and slug = "founders") and all active plans
+ * for the admin sales pages UI. Server-only; do not call from client.
+ */
+export async function getAdminSalesPagesWithPlans(): Promise<{
+  mainSalesPage: SalesPageRow | null
+  foundersSalesPage: SalesPageRow | null
+  orderedPlans: ActivePlanForSalesPage[]
+}> {
+  const supabase = await createClient()
+
+  const [homeResult, foundersResult, plansResult] = await Promise.all([
+    supabase
+      .from("public_sales_pages")
+      .select("*")
+      .eq("slug", "home")
+      .maybeSingle(),
+    supabase
+      .from("public_sales_pages")
+      .select("*")
+      .eq("slug", "founders")
+      .maybeSingle(),
+    supabase
+      .from("plans")
+      .select("id, name, price, currency, billing, features, most_popular, payment_url")
+      .eq("active", true),
+  ])
+
+  const mainSalesPage = (homeResult.data ?? null) as SalesPageRow | null
+  const foundersSalesPage = (foundersResult.data ?? null) as SalesPageRow | null
+  const orderedPlans = (plansResult.data ?? []) as ActivePlanForSalesPage[]
+
+  return { mainSalesPage, foundersSalesPage, orderedPlans }
+}

@@ -295,3 +295,34 @@ export async function updateSalesPageHero(
 
   return { success: true }
 }
+
+export async function uploadSalesPageImage(
+  pageType: SalesPageType,
+  formData: FormData,
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { success: false, error: authError || "Unauthorized" }
+  }
+
+  const file = formData.get("file") as File | null
+  const kind = formData.get("kind") as string | null
+  if (!file || !kind) {
+    return { success: false, error: "Missing file or kind" }
+  }
+
+  const supabase = createServiceRoleClient()
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"
+  const fileName = `sales-pages/${pageType}/${kind}-${Date.now()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from("dashboard-assets")
+    .upload(fileName, file, { upsert: true })
+
+  if (uploadError) {
+    return { success: false, error: uploadError.message }
+  }
+
+  const { data: urlData } = supabase.storage.from("dashboard-assets").getPublicUrl(fileName)
+  return { success: true, url: urlData.publicUrl }
+}
