@@ -57,6 +57,7 @@ export interface CreatePlanPayload {
   most_popular: boolean
   active: boolean
   sort_order: number
+  payment_url?: string | null
 }
 
 export async function createPlan(payload: CreatePlanPayload): Promise<{ success: boolean; error?: string }> {
@@ -81,6 +82,7 @@ export async function createPlan(payload: CreatePlanPayload): Promise<{ success:
       most_popular: payload.most_popular,
       active: payload.active,
       sort_order: payload.sort_order,
+      payment_url: payload.payment_url ?? null,
     },
   ])
 
@@ -105,6 +107,7 @@ export interface UpdatePlanPayload {
   most_popular: boolean
   active: boolean
   sort_order: number
+  payment_url?: string | null
 }
 
 export async function updatePlan(payload: UpdatePlanPayload): Promise<{ success: boolean; error?: string }> {
@@ -130,6 +133,7 @@ export async function updatePlan(payload: UpdatePlanPayload): Promise<{ success:
       most_popular: payload.most_popular,
       active: payload.active,
       sort_order: payload.sort_order,
+      payment_url: payload.payment_url ?? null,
     })
     .eq("id", payload.id)
 
