@@ -96,7 +96,7 @@ export async function updateSalesPageCommunityVision(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("page_type", pageType)
+    .eq("slug", "home")
 
   if (error) {
     return { success: false, error: error.message }
@@ -125,7 +125,7 @@ export async function updateSalesPageEducationSection(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("page_type", pageType)
+    .eq("slug", "home")
 
   if (error) {
     return { success: false, error: error.message }
@@ -167,7 +167,7 @@ export async function updateSalesPageVisibility(
   const { error } = await supabase
     .from("public_sales_pages")
     .update(updatePayload)
-    .eq("page_type", pageType)
+    .eq("slug", "home")
 
   if (error) {
     return { success: false, error: error.message }
@@ -229,7 +229,7 @@ export async function updateSalesPagePlans(
       selected_plan_ids: payload.selected_plan_ids,
       updated_at: new Date().toISOString(),
     })
-    .eq("page_type", pageType)
+    .eq("slug", "home")
 
   if (error) {
     return { success: false, error: error.message }
@@ -257,7 +257,6 @@ export async function updateSalesPageHero(
   const supabase = createServiceRoleClient()
 
   const updatePayload: Record<string, unknown> = {
-    page_type: pageType,
     updated_at: new Date().toISOString(),
   }
   if (payload.logo_url !== undefined) updatePayload.logo_url = payload.logo_url
@@ -267,7 +266,8 @@ export async function updateSalesPageHero(
 
   const { error } = await supabase
     .from("public_sales_pages")
-    .upsert(updatePayload, { onConflict: "page_type" })
+    .update(updatePayload)
+    .eq("slug", "home")
 
   if (error) {
     return { success: false, error: error.message }

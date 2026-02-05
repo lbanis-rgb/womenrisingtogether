@@ -102,7 +102,7 @@ export function SalesPageForm({ pageType }: { pageType: SalesPageType }) {
         const result = await supabase
           .from("public_sales_pages")
           .select("*")
-          .eq("page_type", pageType)
+          .eq("slug", "home")
           .single()
         data = result.data as SalesPageRow | null
         error = result.error
