@@ -1,6 +1,55 @@
 import Link from "next/link"
+import type { ReactNode } from "react"
 import type { SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
 
+/** Renders Markdown-style text (paragraphs, line breaks, **bold**, *italic*) as React nodes. No raw HTML. */
+function renderMarkdownBody(text: string): ReactNode {
+  if (!text || typeof text !== "string") return null
+  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim())
+  return paragraphs.map((para, i) => {
+    const lineParts: ReactNode[] = []
+    const lines = para.split("\n")
+    lines.forEach((line, j) => {
+      if (j > 0) lineParts.push(<br key={`br-${i}-${j}`} />)
+      const segments = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+      segments.forEach((seg, k) => {
+        const key = `${i}-${j}-${k}`
+        if (seg.startsWith("**") && seg.endsWith("**"))
+          lineParts.push(<strong key={key}>{seg.slice(2, -2)}</strong>)
+        else if (seg.startsWith("*") && seg.endsWith("*") && seg.length > 1)
+          lineParts.push(<em key={key}>{seg.slice(1, -1)}</em>)
+        else if (seg) lineParts.push(seg)
+      })
+    })
+    return (
+      <p key={i} className="text-lg text-gray-600">
+        {lineParts}
+      </p>
+    )
+  })
+}
+
+const VISION_DEFAULT_HEADLINE =
+  "This Community Is Built for People Who Want to Go Deeper"
+const VISION_DEFAULT_IMAGE_URL =
+  "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/community-group-image-Y4Vv49m4TMagbGFYrlIN41GTBz51Ad.png"
+const VISION_DEFAULT_BODY = (
+  <>
+    <p className="text-lg text-gray-600">
+      This community is designed around a clear focus:{" "}
+      <span className="text-gray-900 font-bold">
+        helping people grow through connection, learning, and meaningful action.
+      </span>
+    </p>
+    <p className="text-lg text-gray-600">
+      It&apos;s for people who want more than endless content feeds and algorithms — they want real
+      conversations, practical insight, and momentum.
+    </p>
+    <p className="text-lg text-gray-600">
+      Members come here to explore ideas, build relationships, and move forward with support.
+    </p>
+  </>
+)
 /**
  * Shared sales page content used by the public "/" route and the admin preview modal.
  * No layout chrome (admin headers, editor UI). No preview-only props.
@@ -8,6 +57,19 @@ import type { SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
  */
 export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }) {
   const logoUrl = salesPage?.logo_url ?? process.env.NEXT_PUBLIC_BRAND_LOGO_URL
+
+  const visionHeadline = salesPage?.vision_headline ?? VISION_DEFAULT_HEADLINE
+  const visionImageUrl = salesPage?.vision_image_url ?? VISION_DEFAULT_IMAGE_URL
+  const visionBodyContent =
+    salesPage?.vision_body_text?.trim() != null && salesPage?.vision_body_text?.trim() !== ""
+      ? renderMarkdownBody(salesPage.vision_body_text)
+      : VISION_DEFAULT_BODY
+  const visionBulletsRaw = salesPage?.vision_who_for_bullets
+  const visionBullets =
+    Array.isArray(visionBulletsRaw) && visionBulletsRaw.length > 0
+      ? visionBulletsRaw.filter((b): b is string => typeof b === "string" && b.trim() !== "")
+      : null
+  const showWhoForBlock = visionBullets != null && visionBullets.length > 0
 
   return (
     <div className="font-sans bg-white">
@@ -82,54 +144,34 @@ export function MainSalesPage({ salesPage }: { salesPage?: SalesPageRow | null }
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight text-balance">
-              This Community Is Built for People Who Want to Go Deeper
+              {visionHeadline}
             </h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative">
               <div className="bg-gradient-to-br from-gray-100 to-brand-50 rounded-2xl shadow-xl overflow-hidden aspect-video flex items-center justify-center border border-gray-200">
                 <img
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/community-group-image-Y4Vv49m4TMagbGFYrlIN41GTBz51Ad.png"
-                  alt="Diverse group of professionals collaborating around a table with laptops, tablets and charts, sharing ideas in a modern meeting setting"
+                  src={visionImageUrl}
+                  alt="Community vision illustration"
                   className="w-full h-full object-cover"
                 />
               </div>
             </div>
             <div className="space-y-6">
-              <div className="space-y-4 text-lg text-gray-600">
-                <p>
-                  This community is designed around a clear focus:{" "}
-                  <span className="text-gray-900 font-bold">
-                    helping people grow through connection, learning, and meaningful action.
-                  </span>
-                </p>
-                <p>
-                  It's for people who want more than endless content feeds and algorithms — they want real conversations,
-                  practical insight, and momentum.
-                </p>
-                <p>Members come here to explore ideas, build relationships, and move forward with support.</p>
-              </div>
-              <div className="bg-gradient-to-br from-brand-50 to-gray-50 rounded-xl p-8 border border-brand-100 space-y-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Who It's For:</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <i className="fa-solid fa-star text-brand-500 mt-1"></i>
-                    <span className="text-gray-700">Experts, practitioners, coaches, creators, and guides</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <i className="fa-solid fa-star text-brand-500 mt-1"></i>
-                    <span className="text-gray-700">People building a message, movement, or mission-driven business</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <i className="fa-solid fa-star text-brand-500 mt-1"></i>
-                    <span className="text-gray-700">Curious learners who value quality, depth, and contribution</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <i className="fa-solid fa-star text-brand-500 mt-1"></i>
-                    <span className="text-gray-700">Members who want connection — not noise</span>
+              <div className="space-y-4">{visionBodyContent}</div>
+              {showWhoForBlock && (
+                <div className="bg-gradient-to-br from-brand-50 to-gray-50 rounded-xl p-8 border border-brand-100 space-y-4">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Who It&apos;s For:</h3>
+                  <div className="space-y-3">
+                    {visionBullets!.map((bullet, index) => (
+                      <div key={index} className="flex items-start space-x-3">
+                        <i className="fa-solid fa-star text-brand-500 mt-1"></i>
+                        <span className="text-gray-700">{bullet}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
