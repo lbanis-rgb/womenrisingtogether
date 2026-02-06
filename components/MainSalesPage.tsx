@@ -987,12 +987,7 @@ export function MainSalesPage({
             Whether you're here to learn, connect, or contribute — the best way to understand this community is to
             experience it from the inside.
           </p>
-          <Link
-            href="/reg"
-            className="inline-block px-8 py-4 bg-white text-brand-700 rounded-full hover:bg-gray-100 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl text-lg"
-          >
-            Create Your Free Account
-          </Link>
+          
         </div>
       </section>
 
