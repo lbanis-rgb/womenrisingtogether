@@ -223,8 +223,8 @@ export default function AdminPlansPage() {
         alert("Price must be greater than 0 for paid plans.")
         return false
       }
-      if (!paymentUrl) {
-        alert("Payment URL is required for paid plans.")
+      if (!paymentUrl.trim()) {
+        alert("Payment / Register URL is required for paid plans.")
         return false
       }
       try {
@@ -232,6 +232,15 @@ export default function AdminPlansPage() {
       } catch {
         alert("Please enter a valid payment URL.")
         return false
+      }
+    } else {
+      if (paymentUrl.trim()) {
+        try {
+          new URL(paymentUrl)
+        } catch {
+          alert("Please enter a valid URL.")
+          return false
+        }
       }
     }
     return true
@@ -767,74 +776,80 @@ export default function AdminPlansPage() {
               </div>
 
               {/* Payment Details */}
-              {!isFree && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="planPrice" className="block text-sm font-medium text-gray-700 mb-1">
-                          Price
-                        </label>
-                        <input
-                          type="number"
-                          id="planPrice"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          min="0"
-                          step="0.01"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
+                <div className="space-y-4">
+                  {!isFree && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="planPrice" className="block text-sm font-medium text-gray-700 mb-1">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            id="planPrice"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="planCurrency" className="block text-sm font-medium text-gray-700 mb-1">
+                            Currency
+                          </label>
+                          <select
+                            id="planCurrency"
+                            value={currency}
+                            onChange={(e) => setCurrency(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="AUD">AUD</option>
+                            <option value="CAD">CAD</option>
+                          </select>
+                        </div>
                       </div>
                       <div>
-                        <label htmlFor="planCurrency" className="block text-sm font-medium text-gray-700 mb-1">
-                          Currency
+                        <label htmlFor="planBilling" className="block text-sm font-medium text-gray-700 mb-1">
+                          Billing
                         </label>
                         <select
-                          id="planCurrency"
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
+                          id="planBilling"
+                          value={billing}
+                          onChange={(e) => setBilling(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="AUD">AUD</option>
-                          <option value="CAD">CAD</option>
+                          <option value="Monthly">Monthly</option>
+                          <option value="Yearly">Yearly</option>
+                          <option value="Lifetime">Lifetime</option>
                         </select>
                       </div>
-                    </div>
-                    <div>
-                      <label htmlFor="planBilling" className="block text-sm font-medium text-gray-700 mb-1">
-                        Billing
-                      </label>
-                      <select
-                        id="planBilling"
-                        value={billing}
-                        onChange={(e) => setBilling(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="Monthly">Monthly</option>
-                        <option value="Yearly">Yearly</option>
-                        <option value="Lifetime">Lifetime</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="paymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment URL
-                      </label>
-                      <input
-                        type="url"
-                        id="paymentUrl"
-                        value={paymentUrl}
-                        onChange={(e) => setPaymentUrl(e.target.value)}
-                        placeholder="https://checkout.example.com/..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
+                    </>
+                  )}
+                  <div>
+                    <label htmlFor="paymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment / Register URL
+                    </label>
+                    <input
+                      type="url"
+                      id="paymentUrl"
+                      value={paymentUrl}
+                      onChange={(e) => setPaymentUrl(e.target.value)}
+                      placeholder={isFree ? "https://example.com/reg or GHL form URL" : "https://checkout.example.com/..."}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      For free plans, use this link to send users to a registration or opt-in form (e.g. a GHL form or
+                      direct /reg link).
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Plan Features */}
               <div>
@@ -1011,74 +1026,80 @@ export default function AdminPlansPage() {
               </div>
 
               {/* Payment Details */}
-              {!isFree && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="editPlanPrice" className="block text-sm font-medium text-gray-700 mb-1">
-                          Price
-                        </label>
-                        <input
-                          type="number"
-                          id="editPlanPrice"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          min="0"
-                          step="0.01"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
+                <div className="space-y-4">
+                  {!isFree && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="editPlanPrice" className="block text-sm font-medium text-gray-700 mb-1">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            id="editPlanPrice"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="editPlanCurrency" className="block text-sm font-medium text-gray-700 mb-1">
+                            Currency
+                          </label>
+                          <select
+                            id="editPlanCurrency"
+                            value={currency}
+                            onChange={(e) => setCurrency(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="AUD">AUD</option>
+                            <option value="CAD">CAD</option>
+                          </select>
+                        </div>
                       </div>
                       <div>
-                        <label htmlFor="editPlanCurrency" className="block text-sm font-medium text-gray-700 mb-1">
-                          Currency
+                        <label htmlFor="editPlanBilling" className="block text-sm font-medium text-gray-700 mb-1">
+                          Billing
                         </label>
                         <select
-                          id="editPlanCurrency"
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
+                          id="editPlanBilling"
+                          value={billing}
+                          onChange={(e) => setBilling(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="AUD">AUD</option>
-                          <option value="CAD">CAD</option>
+                          <option value="Monthly">Monthly</option>
+                          <option value="Yearly">Yearly</option>
+                          <option value="Lifetime">Lifetime</option>
                         </select>
                       </div>
-                    </div>
-                    <div>
-                      <label htmlFor="editPlanBilling" className="block text-sm font-medium text-gray-700 mb-1">
-                        Billing
-                      </label>
-                      <select
-                        id="editPlanBilling"
-                        value={billing}
-                        onChange={(e) => setBilling(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="Monthly">Monthly</option>
-                        <option value="Yearly">Yearly</option>
-                        <option value="Lifetime">Lifetime</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="editPaymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment URL
-                      </label>
-                      <input
-                        type="url"
-                        id="editPaymentUrl"
-                        value={paymentUrl}
-                        onChange={(e) => setPaymentUrl(e.target.value)}
-                        placeholder="https://checkout.example.com/..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
+                    </>
+                  )}
+                  <div>
+                    <label htmlFor="editPaymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment / Register URL
+                    </label>
+                    <input
+                      type="url"
+                      id="editPaymentUrl"
+                      value={paymentUrl}
+                      onChange={(e) => setPaymentUrl(e.target.value)}
+                      placeholder={isFree ? "https://example.com/reg or GHL form URL" : "https://checkout.example.com/..."}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      For free plans, use this link to send users to a registration or opt-in form (e.g. a GHL form or
+                      direct /reg link).
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Plan Features */}
               <div>
