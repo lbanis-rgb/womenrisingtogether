@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import type { ActivePlanForSalesPage, SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
 import { MainSalesPage } from "@/components/MainSalesPage"
@@ -364,6 +365,78 @@ export default async function FoundersPage() {
         </section>
       )}
 
+      {/* Final CTA Section */}
+      <section id="final-cta" className="py-24 px-6 bg-gradient-to-br from-brand-600 to-brand-800 text-white">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-4xl lg:text-6xl font-bold mb-6">Ready to Become a Founding Leader?</h2>
+          <p className="text-xl lg:text-2xl mb-12 leading-relaxed opacity-95">
+            Join the limited group of experts shaping this community from the beginning — with lifetime access, full
+            creator permissions, and built-in ways to share your expertise and grow your impact.
+          </p>
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <div className="text-5xl font-bold mb-2">
+                  {founders.founders_price_lifetime != null ? `$${founders.founders_price_lifetime}` : "$997"}
+                </div>
+                <p className="text-white/90">One-time lifetime investment</p>
+              </div>
+              <div>
+                <div className="text-5xl font-bold mb-2">{spotsLabel}</div>
+                <p className="text-white/90">Limited spots available</p>
+              </div>
+              <div>
+                <div className="text-5xl font-bold mb-2">∞</div>
+                <p className="text-white/90">Lifetime access & value</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 py-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex items-center">
+              <img
+                src={founders.logo_url ?? process.env.NEXT_PUBLIC_BRAND_LOGO_URL}
+                alt="Brand Logo"
+                className="h-8 w-auto brightness-0 invert"
+              />
+            </div>
+            <div className="flex items-center gap-6">
+              <Link
+                href="/login"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                Login
+              </Link>
+              <a
+                href={process.env.NEXT_PUBLIC_TERMS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                Terms
+              </a>
+              <a
+                href={process.env.NEXT_PUBLIC_PRIVACY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                Privacy
+              </a>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center">
+            <p className="text-gray-500 text-sm">
+              &copy; {new Date().getFullYear()} All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </>
   )
 }
