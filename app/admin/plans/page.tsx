@@ -223,8 +223,8 @@ export default function AdminPlansPage() {
         alert("Price must be greater than 0 for paid plans.")
         return false
       }
-      if (!paymentUrl) {
-        alert("Payment URL is required for paid plans.")
+      if (!paymentUrl.trim()) {
+        alert("Payment / Register URL is required for paid plans.")
         return false
       }
       try {
@@ -232,6 +232,15 @@ export default function AdminPlansPage() {
       } catch {
         alert("Please enter a valid payment URL.")
         return false
+      }
+    } else {
+      if (paymentUrl.trim()) {
+        try {
+          new URL(paymentUrl)
+        } catch {
+          alert("Please enter a valid URL.")
+          return false
+        }
       }
     }
     return true
@@ -537,10 +546,7 @@ export default function AdminPlansPage() {
                     Billing
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Redirect URL
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Register URL
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Action
@@ -550,14 +556,14 @@ export default function AdminPlansPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {isLoading && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                       Loading plans...
                     </td>
                   </tr>
                 )}
                 {!isLoading && (error || plans.length === 0) && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                       No plans found
                     </td>
                   </tr>
@@ -599,17 +605,6 @@ export default function AdminPlansPage() {
                         ) : (
                           <span className="text-xs text-gray-400" title="Site domain not configured">
                             —
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {plan.active ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            Inactive
                           </span>
                         )}
                       </td>
@@ -767,74 +762,80 @@ export default function AdminPlansPage() {
               </div>
 
               {/* Payment Details */}
-              {!isFree && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="planPrice" className="block text-sm font-medium text-gray-700 mb-1">
-                          Price
-                        </label>
-                        <input
-                          type="number"
-                          id="planPrice"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          min="0"
-                          step="0.01"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
+                <div className="space-y-4">
+                  {!isFree && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="planPrice" className="block text-sm font-medium text-gray-700 mb-1">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            id="planPrice"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="planCurrency" className="block text-sm font-medium text-gray-700 mb-1">
+                            Currency
+                          </label>
+                          <select
+                            id="planCurrency"
+                            value={currency}
+                            onChange={(e) => setCurrency(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="AUD">AUD</option>
+                            <option value="CAD">CAD</option>
+                          </select>
+                        </div>
                       </div>
                       <div>
-                        <label htmlFor="planCurrency" className="block text-sm font-medium text-gray-700 mb-1">
-                          Currency
+                        <label htmlFor="planBilling" className="block text-sm font-medium text-gray-700 mb-1">
+                          Billing
                         </label>
                         <select
-                          id="planCurrency"
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
+                          id="planBilling"
+                          value={billing}
+                          onChange={(e) => setBilling(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="AUD">AUD</option>
-                          <option value="CAD">CAD</option>
+                          <option value="Monthly">Monthly</option>
+                          <option value="Yearly">Yearly</option>
+                          <option value="Lifetime">Lifetime</option>
                         </select>
                       </div>
-                    </div>
-                    <div>
-                      <label htmlFor="planBilling" className="block text-sm font-medium text-gray-700 mb-1">
-                        Billing
-                      </label>
-                      <select
-                        id="planBilling"
-                        value={billing}
-                        onChange={(e) => setBilling(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="Monthly">Monthly</option>
-                        <option value="Yearly">Yearly</option>
-                        <option value="Lifetime">Lifetime</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="paymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment URL
-                      </label>
-                      <input
-                        type="url"
-                        id="paymentUrl"
-                        value={paymentUrl}
-                        onChange={(e) => setPaymentUrl(e.target.value)}
-                        placeholder="https://checkout.example.com/..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
+                    </>
+                  )}
+                  <div>
+                    <label htmlFor="paymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment / Register URL
+                    </label>
+                    <input
+                      type="url"
+                      id="paymentUrl"
+                      value={paymentUrl}
+                      onChange={(e) => setPaymentUrl(e.target.value)}
+                      placeholder={isFree ? "https://example.com/reg or GHL form URL" : "https://checkout.example.com/..."}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      For free plans, use this link to send users to a registration or opt-in form (e.g. a GHL form or
+                      direct /reg link).
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Plan Features */}
               <div>
@@ -886,21 +887,6 @@ export default function AdminPlansPage() {
                         id="mostPopular"
                         checked={mostPopular}
                         onChange={(e) => setMostPopular(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="activePlan" className="text-sm font-medium text-gray-700">
-                      Active (visible on sales page)
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        id="activePlan"
-                        checked={active}
-                        onChange={(e) => setActive(e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -1011,74 +997,80 @@ export default function AdminPlansPage() {
               </div>
 
               {/* Payment Details */}
-              {!isFree && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="editPlanPrice" className="block text-sm font-medium text-gray-700 mb-1">
-                          Price
-                        </label>
-                        <input
-                          type="number"
-                          id="editPlanPrice"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          min="0"
-                          step="0.01"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h3>
+                <div className="space-y-4">
+                  {!isFree && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="editPlanPrice" className="block text-sm font-medium text-gray-700 mb-1">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            id="editPlanPrice"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="editPlanCurrency" className="block text-sm font-medium text-gray-700 mb-1">
+                            Currency
+                          </label>
+                          <select
+                            id="editPlanCurrency"
+                            value={currency}
+                            onChange={(e) => setCurrency(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="AUD">AUD</option>
+                            <option value="CAD">CAD</option>
+                          </select>
+                        </div>
                       </div>
                       <div>
-                        <label htmlFor="editPlanCurrency" className="block text-sm font-medium text-gray-700 mb-1">
-                          Currency
+                        <label htmlFor="editPlanBilling" className="block text-sm font-medium text-gray-700 mb-1">
+                          Billing
                         </label>
                         <select
-                          id="editPlanCurrency"
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
+                          id="editPlanBilling"
+                          value={billing}
+                          onChange={(e) => setBilling(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="AUD">AUD</option>
-                          <option value="CAD">CAD</option>
+                          <option value="Monthly">Monthly</option>
+                          <option value="Yearly">Yearly</option>
+                          <option value="Lifetime">Lifetime</option>
                         </select>
                       </div>
-                    </div>
-                    <div>
-                      <label htmlFor="editPlanBilling" className="block text-sm font-medium text-gray-700 mb-1">
-                        Billing
-                      </label>
-                      <select
-                        id="editPlanBilling"
-                        value={billing}
-                        onChange={(e) => setBilling(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="Monthly">Monthly</option>
-                        <option value="Yearly">Yearly</option>
-                        <option value="Lifetime">Lifetime</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="editPaymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                        Payment URL
-                      </label>
-                      <input
-                        type="url"
-                        id="editPaymentUrl"
-                        value={paymentUrl}
-                        onChange={(e) => setPaymentUrl(e.target.value)}
-                        placeholder="https://checkout.example.com/..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
+                    </>
+                  )}
+                  <div>
+                    <label htmlFor="editPaymentUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment / Register URL
+                    </label>
+                    <input
+                      type="url"
+                      id="editPaymentUrl"
+                      value={paymentUrl}
+                      onChange={(e) => setPaymentUrl(e.target.value)}
+                      placeholder={isFree ? "https://example.com/reg or GHL form URL" : "https://checkout.example.com/..."}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      For free plans, use this link to send users to a registration or opt-in form (e.g. a GHL form or
+                      direct /reg link).
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Plan Features */}
               <div>
@@ -1161,21 +1153,6 @@ export default function AdminPlansPage() {
                         id="editMostPopular"
                         checked={mostPopular}
                         onChange={(e) => setMostPopular(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="editActivePlan" className="text-sm font-medium text-gray-700">
-                      Active (visible on sales page)
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        id="editActivePlan"
-                        checked={active}
-                        onChange={(e) => setActive(e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
