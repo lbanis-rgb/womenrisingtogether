@@ -63,10 +63,12 @@ export function MainSalesPage({
   salesPage,
   orderedPlans = [],
   stopAfterSection,
+  includeAiMentorsWhenStopped,
 }: {
   salesPage?: SalesPageRow | null
   orderedPlans?: ActivePlanForSalesPage[]
   stopAfterSection?: "salesy"
+  includeAiMentorsWhenStopped?: boolean
 }) {
   const stopAfterSalesy = stopAfterSection === "salesy"
   const logoUrl = salesPage?.logo_url ?? process.env.NEXT_PUBLIC_BRAND_LOGO_URL
@@ -780,9 +782,7 @@ export function MainSalesPage({
         </>
       )}
 
-      {!stopAfterSalesy && (
-      <>
-      {showAiMentors && (
+      {showAiMentors && (!stopAfterSalesy || includeAiMentorsWhenStopped) && (
         <>
       {/* AI Mentors Section */}
       <section id="ai-mentors" className="py-24 px-6 bg-white">
@@ -879,6 +879,8 @@ export function MainSalesPage({
         </>
       )}
 
+      {!stopAfterSalesy && (
+      <>
       {/* Membership Paths Section */}
       <section id="membership" className="py-24 px-6 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto">

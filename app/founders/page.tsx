@@ -71,6 +71,7 @@ export default async function FoundersPage() {
         salesPage={founders}
         orderedPlans={orderedFoundersPlans as ActivePlanForSalesPage[]}
         stopAfterSection="salesy"
+        includeAiMentorsWhenStopped
       />
 
       {/* Invitation Section */}
@@ -363,48 +364,6 @@ export default async function FoundersPage() {
         </section>
       )}
 
-      {/* Final CTA Section */}
-      <section id="final-cta" className="py-24 px-6 bg-gradient-to-br from-brand-600 to-brand-800 text-white">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-4xl lg:text-6xl font-bold mb-6">Ready to Become a Founding Leader?</h2>
-          <p className="text-xl lg:text-2xl mb-12 leading-relaxed opacity-95">
-            Join the limited group of experts shaping this community from the beginning — with lifetime access, full
-            creator permissions, and built-in ways to share your expertise and grow your impact.
-          </p>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-12 border border-white/20">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div>
-                <div className="text-5xl font-bold mb-2">
-                  {founders.founders_price_lifetime != null ? `$${founders.founders_price_lifetime}` : "$997"}
-                </div>
-                <p className="text-white/90">One-time lifetime investment</p>
-              </div>
-              <div>
-                <div className="text-5xl font-bold mb-2">{spotsLabel}</div>
-                <p className="text-white/90">Limited spots available</p>
-              </div>
-              <div>
-                <div className="text-5xl font-bold mb-2">∞</div>
-                <p className="text-white/90">Lifetime access & value</p>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-6">
-            <a
-              href="#apply"
-              className="inline-block bg-white text-brand-600 px-12 py-5 rounded-full font-bold text-xl hover:shadow-2xl transition transform hover:scale-105"
-            >
-              Claim Your Founding Leader Spot Now
-            </a>
-            <p className="text-white/80">
-              <i className="fa-solid fa-clock mr-2"></i>
-              {spots != null
-                ? `Available until ${spots} spots are filled — don't miss this opportunity`
-                : "Available until spots are filled — don't miss this opportunity"}
-            </p>
-          </div>
-        </div>
-      </section>
     </>
   )
 }
