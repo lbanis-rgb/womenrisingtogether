@@ -93,6 +93,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
     spotlight,
     brandAccentColor,
     inboxActivity,
+    headerImageUrl,
   } = props
 
   const hasInboxActivity =
@@ -105,7 +106,17 @@ export function Dashboard2Content(props: Dashboard2Data) {
   const accentStyle = { backgroundColor: brandAccentColor || "#2563eb" } as React.CSSProperties
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 space-y-0 bg-gray-50 min-h-full">
+    <>
+      {headerImageUrl && (
+        <div className="relative w-full h-[140px] md:h-[200px] overflow-hidden rounded-b-2xl">
+          <img
+            src={headerImageUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
+      )}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 space-y-0 bg-gray-50 min-h-full">
       {/* Section 1: Welcome Header */}
       <section id="welcome-header" className="mb-8 sm:mb-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -664,5 +675,6 @@ export function Dashboard2Content(props: Dashboard2Data) {
         </section>
       )}
     </div>
+  </>
   )
 }

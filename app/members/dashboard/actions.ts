@@ -36,6 +36,7 @@ export type Dashboard2Data = {
   creatorMessage: string | null
   creatorVideoUrl: string | null
   creatorVideoThumbnailUrl: string | null
+  headerImageUrl?: string | null
   weeklyItems: WeeklyItem[]
   featuredSections: Record<string, unknown[]>
   spotlight: SpotlightSettings | null
@@ -103,6 +104,10 @@ export async function getDashboard2Data(): Promise<Dashboard2Data> {
   const spotlight = dashboard.spotlight && typeof dashboard.spotlight === "object"
     ? (dashboard.spotlight as SpotlightSettings)
     : null
+  const headerImageUrl =
+    typeof dashboard.header_image_url === "string" && dashboard.header_image_url.trim()
+      ? dashboard.header_image_url.trim()
+      : null
 
   const sectionIds = {
     groups: featuredSections.groups || [],
@@ -233,6 +238,7 @@ export async function getDashboard2Data(): Promise<Dashboard2Data> {
     creatorMessage,
     creatorVideoUrl,
     creatorVideoThumbnailUrl: getYouTubeThumbnail(creatorVideoUrl) || "https://storage.googleapis.com/uxpilot-auth.appspot.com/founder-message-video.jpg",
+    headerImageUrl,
     weeklyItems,
     featuredSections: {
       groups,

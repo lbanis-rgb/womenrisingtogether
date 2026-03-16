@@ -29,7 +29,7 @@ export async function getFeedPostsPage(
       status,
       created_at,
       profiles!comments_author_id_fkey (
-        display_name,
+        full_name,
         avatar_url
       )
     `,
@@ -58,11 +58,11 @@ export async function getFeedPostsPage(
   }
 
   const mapped = (posts || []).map((post: any) => {
-    const dn = post.profiles?.display_name || "Unknown User"
+    const dn = post.profiles?.full_name || "Unknown User"
     return {
       ...post,
       author: post.profiles
-        ? { name: dn, display_name: dn, avatar_url: post.profiles.avatar_url }
+        ? { name: dn, avatar_url: post.profiles.avatar_url }
         : undefined,
       profiles: undefined,
     }
@@ -97,7 +97,7 @@ export async function getFeedRepliesForPosts(
       status,
       created_at,
       profiles!comments_author_id_fkey (
-        display_name,
+        full_name,
         avatar_url
       )
     `,
@@ -112,11 +112,11 @@ export async function getFeedRepliesForPosts(
   }
 
   const mapped = (replies || []).map((reply: any) => {
-    const dn = reply.profiles?.display_name || "Unknown User"
+    const dn = reply.profiles?.full_name || "Unknown User"
     return {
       ...reply,
       author: reply.profiles
-        ? { name: dn, display_name: dn, avatar_url: reply.profiles.avatar_url }
+        ? { name: dn, avatar_url: reply.profiles.avatar_url }
         : undefined,
       profiles: undefined,
     }
@@ -143,7 +143,7 @@ export async function getFeedReplies(postId: string): Promise<FeedReply[]> {
       status,
       created_at,
       profiles!comments_author_id_fkey (
-        display_name,
+        full_name,
         avatar_url
       )
     `)
@@ -156,16 +156,16 @@ export async function getFeedReplies(postId: string): Promise<FeedReply[]> {
     return []
   }
 
-  return (replies || []).map((reply: any) => ({
-    ...reply,
-    author: reply.profiles
-      ? {
-          display_name: reply.profiles.display_name || "Unknown User",
-          avatar_url: reply.profiles.avatar_url,
-        }
-      : undefined,
-    profiles: undefined,
-  }))
+  return (replies || []).map((reply: any) => {
+    const dn = reply.profiles?.full_name || "Unknown User"
+    return {
+      ...reply,
+      author: reply.profiles
+        ? { name: dn, avatar_url: reply.profiles.avatar_url }
+        : undefined,
+      profiles: undefined,
+    }
+  })
 }
 
 export async function uploadFeedImage(file: File): Promise<string> {
@@ -417,7 +417,7 @@ export async function getCurrentUserProfile(): Promise<{
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("display_name, avatar_url, is_creator")
+    .select("full_name, avatar_url, is_creator")
     .eq("id", user.id)
     .single()
 
@@ -434,7 +434,7 @@ export async function getCurrentUserProfile(): Promise<{
   return {
     id: user.id,
     email: user.email || "",
-    display_name: profile.display_name || user.email?.split("@")[0] || "User",
+    display_name: profile.full_name || user.email?.split("@")[0] || "User",
     avatar_url: profile.avatar_url || null,
     is_creator: profile.is_creator ?? false,
   }

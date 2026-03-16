@@ -75,6 +75,7 @@ interface DashboardSettings {
   creator_message: string
   creator_video_url: string
   header_image_url: string
+  enable_recaptcha: boolean
   featured_tools: string[]
   featured_groups: string[]
   featured_content: string[]
@@ -161,6 +162,7 @@ const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
   creator_message: "",
   creator_video_url: "",
   header_image_url: "",
+  enable_recaptcha: false,
   featured_tools: [],
   featured_groups: [],
   featured_content: [],
@@ -262,6 +264,7 @@ export default function AdminSettingsPage() {
         creator_message: typeof ds.creator_message === "string" ? ds.creator_message : "",
         creator_video_url: typeof ds.creator_video_url === "string" ? ds.creator_video_url : "",
         header_image_url: ds.header_image_url || "",
+        enable_recaptcha: typeof ds.enable_recaptcha === "boolean" ? ds.enable_recaptcha : false,
         featured_tools: ds.featured_tools || [],
         featured_groups: ds.featured_groups || [],
         featured_content: ds.featured_content || [],
@@ -320,6 +323,7 @@ export default function AdminSettingsPage() {
           creator_message: typeof ds.creator_message === "string" ? ds.creator_message : "",
           creator_video_url: typeof ds.creator_video_url === "string" ? ds.creator_video_url : "",
           header_image_url: (ds.header_image_url as string) || "",
+          enable_recaptcha: typeof ds.enable_recaptcha === "boolean" ? ds.enable_recaptcha : false,
           featured_tools: Array.isArray(ds.featured_tools) ? ds.featured_tools : [],
           featured_groups: Array.isArray(ds.featured_groups) ? ds.featured_groups : [],
           featured_content: Array.isArray(ds.featured_content) ? ds.featured_content : [],
@@ -626,6 +630,15 @@ export default function AdminSettingsPage() {
     }
   }
 
+  const removeHeaderImage = () => {
+    setDashboardSettings((prev) => ({
+      ...prev,
+      header_image_url: "",
+    }))
+
+    showToastNotification("Header image removed.")
+  }
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -679,6 +692,7 @@ export default function AdminSettingsPage() {
         creator_message: dashboardSettings.creator_message ?? "",
         creator_video_url: dashboardSettings.creator_video_url?.trim() || null,
         header_image_url: dashboardSettings.header_image_url || null,
+        enable_recaptcha: dashboardSettings.enable_recaptcha ?? false,
         featured_tools: dashboardSettings.featured_tools,
         featured_groups: dashboardSettings.featured_groups,
         featured_content: dashboardSettings.featured_content,
@@ -704,6 +718,7 @@ export default function AdminSettingsPage() {
 
     const { success, error } = await updateSiteSettings({
       enable_google_auth: enableGoogleAuth,
+      dashboard_settings: { enable_recaptcha: dashboardSettings.enable_recaptcha ?? false },
     })
 
     if (!success) {
@@ -1685,6 +1700,15 @@ export default function AdminSettingsPage() {
                     >
                       {isUploadingHeaderImage ? "Uploading..." : "Upload image"}
                     </button>
+                    {dashboardSettings.header_image_url && (
+                      <button
+                        type="button"
+                        onClick={removeHeaderImage}
+                        className="ml-3 px-4 py-2 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+                      >
+                        Remove Image
+                      </button>
+                    )}
                   </div>
                 </section>
 
@@ -2009,6 +2033,37 @@ export default function AdminSettingsPage() {
                             <span
                               className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                                 enableGoogleAuth ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Enable Google reCAPTCHA on Registration</label>
+                        <p className="text-sm text-gray-500">
+                          Require a Google reCAPTCHA verification during account creation to prevent automated bot registrations.
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end pt-7">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-600">Enabled</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDashboardSettings((prev) => ({
+                                ...prev,
+                                enable_recaptcha: !prev.enable_recaptcha,
+                              }))
+                            }
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              dashboardSettings.enable_recaptcha ? "bg-blue-600" : "bg-gray-300"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                dashboardSettings.enable_recaptcha ? "translate-x-6" : "translate-x-1"
                               }`}
                             />
                           </button>

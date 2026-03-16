@@ -8,11 +8,14 @@ export default async function RegPage() {
   const supabase = await createClient()
   const { data: settings } = await supabase
     .from("site_settings")
-    .select("enable_google_auth")
+    .select("enable_google_auth, dashboard_settings")
     .eq("id", 1)
     .single()
 
   const enableGoogleAuth = settings?.enable_google_auth ?? false
+
+  const dashboard = (settings?.dashboard_settings as Record<string, unknown>) || {}
+  const enableRecaptcha = dashboard?.enable_recaptcha === true
 
   return (
     <>
@@ -21,6 +24,7 @@ export default async function RegPage() {
         termsUrl={termsUrl}
         privacyUrl={privacyUrl}
         enableGoogleAuth={enableGoogleAuth}
+        enableRecaptcha={enableRecaptcha}
       />
     </>
   )

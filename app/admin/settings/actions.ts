@@ -67,6 +67,7 @@ export interface SiteSettingsPayload {
   site_privacy_url?: string
   enable_google_auth?: boolean
   dashboard_settings?: {
+    enable_recaptcha?: boolean
     creator_headline?: string
     creator_message?: string
     creator_video_url?: string | null
@@ -163,6 +164,7 @@ export interface DashboardDropdownData {
     creator_message?: string
     creator_video_url?: string
     header_image_url?: string | null
+    enable_recaptcha?: boolean
     featured_tools?: string[]
     featured_groups?: string[]
     featured_content?: string[]
@@ -287,6 +289,7 @@ export async function getDashboardDropdownData(): Promise<{
         creator_message: typeof dashboardSettings.creator_message === "string" ? dashboardSettings.creator_message : "",
         creator_video_url: typeof dashboardSettings.creator_video_url === "string" ? dashboardSettings.creator_video_url : "",
         header_image_url: dashboardSettings.header_image_url || null,
+        enable_recaptcha: typeof dashboardSettings.enable_recaptcha === "boolean" ? dashboardSettings.enable_recaptcha : false,
         featured_tools: dashboardSettings.featured_tools || [],
         featured_groups: dashboardSettings.featured_groups || [],
         featured_content: dashboardSettings.featured_content || [],

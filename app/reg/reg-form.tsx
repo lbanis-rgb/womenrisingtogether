@@ -68,12 +68,14 @@ interface RegFormProps {
   termsUrl: string | null
   privacyUrl: string | null
   enableGoogleAuth: boolean
+  enableRecaptcha: boolean
 }
 
 export default function RegForm({
   termsUrl,
   privacyUrl,
   enableGoogleAuth,
+  enableRecaptcha,
 }: RegFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -128,7 +130,7 @@ export default function RegForm({
       return
     }
 
-    if (!captchaToken) {
+    if (enableRecaptcha && !captchaToken) {
       setErrors({ email: "Please complete the captcha" })
       return
     }
@@ -320,10 +322,12 @@ export default function RegForm({
             error={errors.password}
           />
 
-          <ReCAPTCHA
-            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-            onChange={(token) => setCaptchaToken(token)}
-          />
+          {enableRecaptcha && (
+            <ReCAPTCHA
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+              onChange={(token) => setCaptchaToken(token)}
+            />
+          )}
 
           {/* Submit Button */}
           <button
