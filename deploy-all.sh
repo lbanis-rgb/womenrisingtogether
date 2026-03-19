@@ -23,11 +23,13 @@ jq -c '.[]' clients.json | while read client; do
   git add .
   git commit --allow-empty -m "Deploy template update"
 
-  git push origin main --force --progress
+  git push origin main --force
+
+  echo "✅ Push complete for $REPO"
 
 done
 
 git remote set-url origin $ORIGINAL_REMOTE
 
 echo ""
-echo "All deployments complete."
+echo "🚀 All deployments complete."
