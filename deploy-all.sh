@@ -4,11 +4,11 @@ echo "Starting multi-client deployment..."
 
 ORIGINAL_REMOTE=$(git remote get-url origin)
 
-jq -c '.[]' clients.json | while read client; do
+while IFS= read -r client; do
 
-  REPO=$(echo $client | jq -r '.repo')
-  NAME=$(echo $client | jq -r '.name')
-  EMAIL=$(echo $client | jq -r '.email')
+  REPO=$(echo "$client" | jq -r '.repo')
+  NAME=$(echo "$client" | jq -r '.name')
+  EMAIL=$(echo "$client" | jq -r '.email')
 
   echo ""
   echo "-----------------------------------"
@@ -16,7 +16,7 @@ jq -c '.[]' clients.json | while read client; do
   echo "Author: $NAME <$EMAIL>"
   echo "-----------------------------------"
 
-  git remote set-url origin $REPO
+  git remote set-url origin "$REPO"
   git config user.name "$NAME"
   git config user.email "$EMAIL"
 
@@ -27,9 +27,9 @@ jq -c '.[]' clients.json | while read client; do
 
   echo "✅ Push complete for $REPO"
 
-done
+done < <(jq -c '.[]' clients.json)
 
-git remote set-url origin $ORIGINAL_REMOTE
+git remote set-url origin "$ORIGINAL_REMOTE"
 
 echo ""
 echo "🚀 All deployments complete."
