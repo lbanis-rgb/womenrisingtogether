@@ -9,7 +9,7 @@ export type GroupForListing = {
   description: string | null
   listingImageUrl: string | null
   joinPolicy: "open" | "request"
-  role: "member" | "moderator" | "owner" | "none"
+  role: "member" | "moderator" | "owner" | "admin" | "none"
   status: string | null
   deleted_at: string | null
   memberCount: number
@@ -296,6 +296,76 @@ export async function createGroup(
     return { success: true, groupId }
   } catch (err) {
     console.error("[createGroup] Unexpected error:", err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown server error",
+    }
+  }
+}
+
+export async function updateGroup(
+  groupId: string,
+  input: CreateGroupInput,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "You must be logged in to update a group" }
+    }
+
+    // Check for unique slug (excluding current group)
+    const { data: existingGroup } = await supabase
+      .from("groups")
+      .select("id")
+      .eq("slug", input.slug)
+      .neq("id", groupId)
+      .single()
+
+    if (existingGroup) {
+      return { success: false, error: "A group with this slug already exists" }
+    }
+
+    const { error: updateError } = await supabase
+      .from("groups")
+      .update({
+        name: input.name,
+        slug: input.slug,
+        description: input.description || null,
+        visibility: input.visibility,
+        listing_image_url: input.listing_image_url || null,
+        header_image_url: input.header_image_url || null,
+        avatar_url: input.avatar_url || null,
+        invite_code: input.invite_code ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", groupId)
+
+    if (updateError) {
+      console.error("[updateGroup] Group update failed:", updateError)
+      return { success: false, error: updateError.message || "Failed to update group" }
+    }
+
+    // Update taxonomy relation if categoryId provided
+    if (input.categoryId !== undefined) {
+      await supabase.from("taxonomy_relations").delete().eq("entity_type", "group").eq("entity_id", groupId)
+
+      if (input.categoryId) {
+        await supabase.from("taxonomy_relations").insert({
+          taxonomy_id: input.categoryId,
+          entity_type: "group",
+          entity_id: groupId,
+        })
+      }
+    }
+
+    return { success: true }
+  } catch (err) {
+    console.error("[updateGroup] Unexpected error:", err)
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown server error",

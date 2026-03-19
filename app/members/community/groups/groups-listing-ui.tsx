@@ -6,9 +6,15 @@ import Image from "next/image"
 import Link from "next/link"
 import { useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Users, Search, Plus, ChevronDown } from "lucide-react"
+import { Users, Search, Plus, ChevronDown, MoreVertical } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { createGroup, type CreateGroupInput, type GroupForListing } from "./actions"
+import { createGroup, updateGroup, type CreateGroupInput, type GroupForListing } from "./actions"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,6 +62,7 @@ function GroupCard({
   onContactAdminClick,
   onViewDetailsClick,
   onLeaveClick,
+  onEditClick,
   activeTab,
   requestStatus,
   brandAccentColor,
@@ -66,6 +73,7 @@ function GroupCard({
   onContactAdminClick: (group: GroupForListing) => void
   onViewDetailsClick: (group: GroupForListing) => void
   onLeaveClick: (group: GroupForListing) => void
+  onEditClick: (group: GroupForListing) => void
   activeTab: "all" | "joined" | "moderating"
   requestStatus?: "pending" | "rejected"
   brandAccentColor: string
@@ -167,8 +175,37 @@ function GroupCard({
 
       <div className="p-5 flex flex-col flex-1 gap-4">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="font-bold text-lg text-gray-900 leading-snug line-clamp-2">{group.name}</h3>
-          {isMember && <RoleBadge role={group.role} />}
+          <h3 className="font-bold text-lg text-gray-900 leading-snug line-clamp-2">
+            {group.name}
+          </h3>
+
+          <div className="flex items-center gap-2">
+            {isMember && <RoleBadge role={group.role} />}
+
+            {(group.role === "owner" || group.role === "admin") && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-1 rounded hover:bg-gray-100"
+                  >
+                    <MoreVertical className="w-4 h-4 text-gray-600" />
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEditClick(group)
+                    }}
+                  >
+                    Edit Group
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
 
         {group.createdByName && (
@@ -340,12 +377,16 @@ function CreateGroupModal({
   onSuccess,
   categories,
   canCreatePrivateGroup,
+  initialGroup,
+  isEditing = false,
 }: {
   open: boolean
   onClose: () => void
   onSuccess: () => void
   categories: GroupCategory[]
   canCreatePrivateGroup: boolean
+  initialGroup?: GroupForListing | null
+  isEditing?: boolean
 }) {
   const router = useRouter()
   const [isPending, setIsPending] = useState(false)
@@ -361,6 +402,7 @@ function CreateGroupModal({
   const [description, setDescription] = useState("")
   const [categoryId, setCategoryId] = useState<string>("")
   const [listingImage, setListingImage] = useState<File | null>(null)
+  const [existingListingImageUrl, setExistingListingImageUrl] = useState<string | null>(null)
   const [headerImage, setHeaderImage] = useState<File | null>(null)
   const [avatarImage, setAvatarImage] = useState<File | null>(null)
 
@@ -369,6 +411,15 @@ function CreateGroupModal({
       setCategoryId("")
     }
   }, [open])
+
+  useEffect(() => {
+    if (initialGroup && open) {
+      setName(initialGroup.name)
+      setSlug(initialGroup.slug)
+      setDescription(initialGroup.description || "")
+      setExistingListingImageUrl(initialGroup.listingImageUrl || null)
+    }
+  }, [initialGroup, open])
 
   useEffect(() => {
     if (!canCreatePrivateGroup && visibility === "private") {
@@ -403,6 +454,7 @@ function CreateGroupModal({
     setDescription("")
     setCategoryId("")
     setListingImage(null)
+    setExistingListingImageUrl(null)
     setHeaderImage(null)
     setAvatarImage(null)
     setError(null)
@@ -429,7 +481,7 @@ function CreateGroupModal({
     setIsPending(true)
     ;(async () => {
       try {
-        let listing_image_url: string | undefined
+        let listing_image_url: string | undefined = existingListingImageUrl || undefined
         let header_image_url: string | undefined
         let avatar_url: string | undefined
 
@@ -496,12 +548,19 @@ function CreateGroupModal({
           invite_code: visibility === "private" ? inviteCode.trim() : undefined,
         }
 
-        const result = await createGroup(input)
+        const result = isEditing
+          ? await updateGroup(initialGroup!.id, input)
+          : await createGroup(input)
         if (result.success) {
+          if (isEditing) {
+            onSuccess()
+            handleClose()
+            return
+          }
           setIsCreated(true)
           return
         } else {
-          setError(result.error || "Failed to create group")
+          setError(result.error || (isEditing ? "Failed to update group" : "Failed to create group"))
         }
       } finally {
         setIsPending(false)
@@ -536,7 +595,7 @@ function CreateGroupModal({
           <>
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-8 py-6">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold">Create Group</DialogTitle>
+                <DialogTitle className="text-2xl font-bold">{isEditing ? "Edit Group" : "Create Group"}</DialogTitle>
               </DialogHeader>
             </div>
 
@@ -670,6 +729,15 @@ function CreateGroupModal({
                     <label htmlFor="listingImage" className="block text-sm font-medium text-gray-700 mb-1.5">
                       Listing Image
                     </label>
+                    {existingListingImageUrl && !listingImage && (
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500 mb-1">Current Image</p>
+                        <img
+                          src={existingListingImageUrl}
+                          className="w-full max-h-[140px] object-cover rounded border"
+                        />
+                      </div>
+                    )}
                     <Input
                       id="listingImage"
                       type="file"
@@ -681,8 +749,15 @@ function CreateGroupModal({
                     <p className="text-sm text-gray-500 mt-1.5">
                       Displayed on the groups listing page (recommended: 1200×400)
                     </p>
+                    {isEditing && (
+                      <div className="mt-3 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md p-3">
+                        The header and avatar images can be edited inside the group page after opening the group.
+                      </div>
+                    )}
                   </div>
 
+                  {!isEditing && (
+                    <>
                   <div>
                     <label htmlFor="headerImage" className="block text-sm font-medium text-gray-700 mb-1.5">
                       Header Image
@@ -712,6 +787,8 @@ function CreateGroupModal({
                     />
                     <p className="text-sm text-gray-500 mt-1.5">Square icon used as the group avatar</p>
                   </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
@@ -730,7 +807,7 @@ function CreateGroupModal({
                 Cancel
               </Button>
               <Button type="submit" form="create-group-form" disabled={isPending || !name.trim() || !slug.trim()}>
-                {isPending ? "Creating group…" : "Create Group"}
+                {isPending ? (isEditing ? "Updating group…" : "Creating group…") : (isEditing ? "Update Group" : "Create Group")}
               </Button>
             </DialogFooter>
           </>
@@ -1021,6 +1098,8 @@ export function GroupsListingUI({
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [leaveGroupTarget, setLeaveGroupTarget] = useState<GroupForListing | null>(null)
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false)
+  const [editGroup, setEditGroup] = useState<GroupForListing | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [pageTitle, setPageTitle] = useState("Discover Groups")
   const [brandAccentColor, setBrandAccentColor] = useState<string>("#1f2937")
   const [brandBackgroundColor, setBrandBackgroundColor] = useState<string>("#111827")
@@ -1176,6 +1255,11 @@ export function GroupsListingUI({
     setIsLeaveModalOpen(true)
   }
 
+  const handleEditGroup = (group: GroupForListing) => {
+    setEditGroup(group)
+    setIsEditModalOpen(true)
+  }
+
   const handleLeaveConfirm = async () => {
     if (!leaveGroupTarget) return
 
@@ -1254,6 +1338,7 @@ export function GroupsListingUI({
                 onContactAdminClick={handleContactAdminClick}
                 onViewDetailsClick={handleViewDetails}
                 onLeaveClick={handleLeaveClick}
+                onEditClick={handleEditGroup}
                 requestStatus={requestStatuses[g.id]}
                 brandAccentColor={brandAccentColor}
                 brandBackgroundColor={brandBackgroundColor}
@@ -1277,10 +1362,25 @@ export function GroupsListingUI({
       <CreateGroupModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={() => {}}
+        onSuccess={() => router.refresh()}
         categories={categories}
         canCreatePrivateGroup={canCreatePrivateGroup}
       />
+
+      {editGroup && (
+        <CreateGroupModal
+          open={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setEditGroup(null)
+          }}
+          onSuccess={() => router.refresh()}
+          categories={categories}
+          canCreatePrivateGroup={canCreatePrivateGroup}
+          initialGroup={editGroup}
+          isEditing
+        />
+      )}
 
       {/* Join Group Modal */}
       <JoinGroupModal

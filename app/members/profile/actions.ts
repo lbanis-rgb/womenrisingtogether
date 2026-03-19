@@ -162,8 +162,19 @@ export async function updateMyProfile(
     updated_at: new Date().toISOString(),
   }
 
+  // Handle name updates so all name fields stay synced
+  if ("full_name" in input && input.full_name) {
+    const name = input.full_name.trim()
+
+    updateData.full_name = name
+    updateData.display_name = name
+
+    const parts = name.split(" ")
+    updateData.first_name = parts.shift() || null
+    updateData.last_name = parts.join(" ") || null
+  }
+
   const fields: (keyof UpdateMyProfileInput)[] = [
-    "full_name",
     "job_title",
     "company",
     "bio",

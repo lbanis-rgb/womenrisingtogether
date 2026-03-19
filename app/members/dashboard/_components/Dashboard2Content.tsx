@@ -102,6 +102,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
     (inboxActivity?.groupMessages ?? 0) > 0
 
   const creatorVideoEmbedUrl = getYouTubeEmbedUrl(creatorVideoUrl)
+  const hasCreatorVideo = Boolean(creatorVideoEmbedUrl)
   const featuredItems = (featuredSections[activeCategory] || []) as Record<string, unknown>[]
   const accentStyle = { backgroundColor: brandAccentColor || "#2563eb" } as React.CSSProperties
 
@@ -153,7 +154,13 @@ export function Dashboard2Content(props: Dashboard2Data) {
       {/* Section 2: Site Message + Video */}
       <section id="site-message-video" className="mb-8 sm:mb-10">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-0">
+            <div
+              className={`grid gap-0 ${
+                hasCreatorVideo
+                  ? "grid-cols-1 lg:grid-cols-[1.3fr_1fr]"
+                  : "grid-cols-1"
+              }`}
+            >
               <div className="p-6 sm:p-8 lg:p-10 flex flex-col justify-center">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
                   {creatorHeadline || "Platform Update"}
@@ -161,7 +168,40 @@ export function Dashboard2Content(props: Dashboard2Data) {
                 <p className="text-gray-600 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
                   {creatorMessage || "Check back soon for updates from the community."}
                 </p>
+
+                {!hasCreatorVideo && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Inbox Activity</h3>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <div className="text-lg font-semibold">{inboxActivity?.unreadMessages ?? 0}</div>
+                        <div className="text-xs text-gray-500">Unread Messages</div>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <div className="text-lg font-semibold">{inboxActivity?.siteUpdates ?? 0}</div>
+                        <div className="text-xs text-gray-500">Site Updates</div>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <div className="text-lg font-semibold">{inboxActivity?.groupMessages ?? 0}</div>
+                        <div className="text-xs text-gray-500">Group Messages</div>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-600 mt-3">
+                      {hasInboxActivity ? "You have new activity waiting" : "You're all caught up"}
+                    </p>
+
+                    <Link
+                      href="/members/inbox?tab=updates"
+                      className="mt-4 inline-flex justify-center items-center rounded-md px-4 py-2.5 text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+                      style={accentStyle}
+                    >
+                      View Updates in Inbox
+                    </Link>
+                  </div>
+                )}
               </div>
+              {hasCreatorVideo && (
               <div className="flex flex-col">
                 <div className="relative aspect-video bg-gray-900 overflow-hidden min-h-[14rem] lg:min-h-0">
                   {creatorVideoEmbedUrl ? (
@@ -208,6 +248,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   </Link>
                 </div>
               </div>
+            )}
             </div>
           </div>
         </section>
