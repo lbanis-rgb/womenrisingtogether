@@ -52,6 +52,97 @@ interface CourseTableProps {
   courses: CourseRow[]
 }
 
+function CourseAccessBadge({ accessType }: { accessType: string | null }) {
+  const a = (accessType ?? "").trim().toLowerCase()
+  if (a === "free") {
+    return (
+      <Badge className="bg-green-100 text-green-800 border-green-200">
+        Free
+      </Badge>
+    )
+  }
+  if (a === "paid") {
+    return (
+      <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+        Paid
+      </Badge>
+    )
+  }
+  if (a === "plan") {
+    return (
+      <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+        Plan
+      </Badge>
+    )
+  }
+  if (!a) {
+    return (
+      <Badge variant="outline" className="text-muted-foreground border-muted">
+        Unknown
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="outline" className="border-slate-300 capitalize">
+      {accessType}
+    </Badge>
+  )
+}
+
+function CourseStatusBadge({ status }: { status: string | null }) {
+  const s = (status ?? "").trim().toLowerCase()
+  if (!s) {
+    return (
+      <Badge variant="outline" className="text-muted-foreground border-muted">
+        Unknown
+      </Badge>
+    )
+  }
+  if (s === "draft") {
+    return <Badge variant="secondary">Draft</Badge>
+  }
+  if (s === "pending") {
+    return (
+      <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+        Pending
+      </Badge>
+    )
+  }
+  if (s === "approved") {
+    return (
+      <Badge className="bg-green-100 text-green-800 border-green-200">
+        Approved
+      </Badge>
+    )
+  }
+  if (s === "retired") {
+    return (
+      <Badge className="bg-gray-100 text-gray-700 border-gray-200">
+        Retired
+      </Badge>
+    )
+  }
+  if (s === "rejected") {
+    return (
+      <Badge className="bg-red-100 text-red-800 border-red-200">
+        Rejected
+      </Badge>
+    )
+  }
+  if (s === "building") {
+    return (
+      <Badge className="bg-orange-100 text-orange-900 border-orange-200">
+        Building
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="outline" className="border-slate-300">
+      {status}
+    </Badge>
+  )
+}
+
 export default function CourseTable({ courses }: CourseTableProps) {
   const router = useRouter()
   const [statusCourse, setStatusCourse] = useState<CourseRow | null>(null)
@@ -119,25 +210,7 @@ export default function CourseTable({ courses }: CourseTableProps) {
               </td>
 
               <td className="p-3">
-
-                {course.access_type === "free" && (
-                  <Badge className="bg-green-100 text-green-800 border-green-200">
-                    Free
-                  </Badge>
-                )}
-
-                {course.access_type === "paid" && (
-                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-                    Paid
-                  </Badge>
-                )}
-
-                {course.access_type === "plan" && (
-                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                    Plan
-                  </Badge>
-                )}
-
+                <CourseAccessBadge accessType={course.access_type} />
               </td>
 
               <td className="p-3">
@@ -145,31 +218,7 @@ export default function CourseTable({ courses }: CourseTableProps) {
               </td>
 
               <td className="p-3">
-
-                {course.status === "draft" && (
-                  <Badge variant="secondary">
-                    Draft
-                  </Badge>
-                )}
-
-                {course.status === "pending" && (
-                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                    Pending
-                  </Badge>
-                )}
-
-                {course.status === "approved" && (
-                  <Badge className="bg-green-100 text-green-800 border-green-200">
-                    Approved
-                  </Badge>
-                )}
-
-                {course.status === "retired" && (
-                  <Badge className="bg-gray-100 text-gray-700 border-gray-200">
-                    Retired
-                  </Badge>
-                )}
-
+                <CourseStatusBadge status={course.status} />
               </td>
 
               <td className="p-3 text-xs text-muted-foreground">
@@ -422,9 +471,15 @@ function StatusModalContent({
   onClose: () => void
   onSuccess: () => void
 }) {
-  const [selectedStatus, setSelectedStatus] = useState(course.status || "draft")
+  const baseStatuses = ["draft", "pending", "approved", "retired", "rejected"] as const
+  const current = course.status?.trim() || ""
+  const STATUS_OPTIONS =
+    current && !baseStatuses.includes(current as (typeof baseStatuses)[number])
+      ? [...baseStatuses, current]
+      : [...baseStatuses]
+
+  const [selectedStatus, setSelectedStatus] = useState(current || "draft")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const STATUS_OPTIONS = ["draft", "pending", "approved", "retired"]
 
   const handleSubmit = async () => {
     setIsSubmitting(true)

@@ -39,6 +39,29 @@ function formatDate(dateStr: string) {
 export function Dashboard2Content(props: Dashboard2Data) {
   const config = useShellConfig()
   const navItems = config.memberNavigation || []
+  const {
+    displayName,
+    profileCompletePercent,
+    creatorHeadline,
+    creatorMessage,
+    creatorVideoUrl,
+    creatorVideoThumbnailUrl,
+    weeklyItems,
+    featuredSections,
+    spotlight,
+    brandAccentColor,
+    inboxActivity,
+    headerImageUrl,
+  } = props
+
+  const hasSpotlight =
+    !!spotlight &&
+    Boolean(spotlight.headline?.trim() || spotlight.media_url?.trim() || spotlight.text?.trim())
+
+  const hasWeeklyItems = Array.isArray(weeklyItems) && weeklyItems.length > 0
+
+  const hasFeaturedContentFor = (key: string) =>
+    Array.isArray(featuredSections?.[key]) && featuredSections[key].length > 0
 
   const { hasGroups, hasCourses, hasMasterclasses, hasExperts, hasContent, hasBusinesses, hasProducts, hasServices, hasTools } = useMemo(() => {
     const communityItem = navItems.find((item) => item.id === "community")
@@ -62,40 +85,32 @@ export function Dashboard2Content(props: Dashboard2Data) {
   const featuredTabs = useMemo(
     () =>
       [
-        hasGroups && { key: "groups" as const, label: CATEGORY_LABELS.groups },
-        hasCourses && { key: "courses" as const, label: CATEGORY_LABELS.courses },
-        hasMasterclasses && { key: "masterclasses" as const, label: CATEGORY_LABELS.masterclasses },
-        hasExperts && { key: "experts" as const, label: CATEGORY_LABELS.experts },
-        hasContent && { key: "content" as const, label: CATEGORY_LABELS.content },
-        hasBusinesses && { key: "businesses" as const, label: CATEGORY_LABELS.businesses },
-        hasProducts && { key: "products" as const, label: CATEGORY_LABELS.products },
-        hasServices && { key: "services" as const, label: CATEGORY_LABELS.services },
-        hasTools && { key: "tools" as const, label: CATEGORY_LABELS.tools },
+        hasGroups && hasFeaturedContentFor("groups") && { key: "groups" as const, label: CATEGORY_LABELS.groups },
+        hasCourses && hasFeaturedContentFor("courses") && { key: "courses" as const, label: CATEGORY_LABELS.courses },
+        hasMasterclasses &&
+          hasFeaturedContentFor("masterclasses") && { key: "masterclasses" as const, label: CATEGORY_LABELS.masterclasses },
+        hasExperts && hasFeaturedContentFor("experts") && { key: "experts" as const, label: CATEGORY_LABELS.experts },
+        hasContent && hasFeaturedContentFor("content") && { key: "content" as const, label: CATEGORY_LABELS.content },
+        hasBusinesses &&
+          hasFeaturedContentFor("businesses") && { key: "businesses" as const, label: CATEGORY_LABELS.businesses },
+        hasProducts && hasFeaturedContentFor("products") && { key: "products" as const, label: CATEGORY_LABELS.products },
+        hasServices && hasFeaturedContentFor("services") && { key: "services" as const, label: CATEGORY_LABELS.services },
+        hasTools && hasFeaturedContentFor("tools") && { key: "tools" as const, label: CATEGORY_LABELS.tools },
       ].filter((t): t is { key: string; label: string } => Boolean(t)),
-    [hasGroups, hasCourses, hasMasterclasses, hasExperts, hasContent, hasBusinesses, hasProducts, hasServices, hasTools]
+    [hasGroups, hasCourses, hasMasterclasses, hasExperts, hasContent, hasBusinesses, hasProducts, hasServices, hasTools, featuredSections]
   )
 
-  const [activeCategory, setActiveCategory] = useState("groups")
+  const hasFeaturedTabs = featuredTabs.length > 0
+  const [activeCategory, setActiveCategory] = useState(featuredTabs[0]?.key || "")
   useEffect(() => {
-    if (featuredTabs.length > 0 && !featuredTabs.some((t) => t.key === activeCategory)) {
+    if (!hasFeaturedTabs) {
+      setActiveCategory("")
+      return
+    }
+    if (!featuredTabs.some((t) => t.key === activeCategory)) {
       setActiveCategory(featuredTabs[0].key)
     }
-  }, [featuredTabs, activeCategory])
-
-  const {
-    displayName,
-    profileCompletePercent,
-    creatorHeadline,
-    creatorMessage,
-    creatorVideoUrl,
-    creatorVideoThumbnailUrl,
-    weeklyItems,
-    featuredSections,
-    spotlight,
-    brandAccentColor,
-    inboxActivity,
-    headerImageUrl,
-  } = props
+  }, [featuredTabs, activeCategory, hasFeaturedTabs])
 
   const hasInboxActivity =
     (inboxActivity?.unreadMessages ?? 0) > 0 ||
@@ -104,7 +119,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
 
   const creatorVideoEmbedUrl = getYouTubeEmbedUrl(creatorVideoUrl)
   const hasCreatorVideo = Boolean(creatorVideoEmbedUrl)
-  const featuredItems = (featuredSections[activeCategory] || []) as Record<string, unknown>[]
+  const featuredItems = (activeCategory ? featuredSections[activeCategory] : []) as Record<string, unknown>[]
   const accentStyle = { backgroundColor: brandAccentColor || "#2563eb" } as React.CSSProperties
 
   return (
@@ -258,7 +273,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
         </section>
 
       {/* Section 4: Featured Categories Header */}
-      {featuredTabs.length > 0 && (
+      {hasFeaturedTabs && (
         <section id="featured-categories-header" className="mb-4">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
             Featured: Choose a Category
@@ -268,7 +283,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
       )}
 
       {/* Section 5: Featured Categories Selector */}
-      {featuredTabs.length > 0 && (
+      {hasFeaturedTabs && (
         <section id="featured-categories" className="mb-6">
           <div className="flex items-center space-x-3 overflow-x-auto pb-2 scroll-container -mx-4 px-4 sm:mx-0 sm:px-0">
             {featuredTabs.map((tab) => (
@@ -290,7 +305,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
       )}
 
       {/* Section 6: Dynamic Featured Content */}
-      {featuredTabs.length > 0 && (
+      {hasFeaturedTabs && (
         <section id="dynamic-content" className="mb-8 sm:mb-10">
           <div className="content-area">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -572,7 +587,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
       )}
 
       {/* Section 3: Happening This Week */}
-      {weeklyItems.length > 0 && (
+      {hasWeeklyItems && (
         <section id="happening-this-week" className="mb-8 sm:mb-10">
           <div className="mb-5">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">Happening This Week</h2>
@@ -607,13 +622,15 @@ export function Dashboard2Content(props: Dashboard2Data) {
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 mb-4 flex-1">{item.description}</p>
-                  <a
-                    href={item.button_url || "#"}
-                    className="mt-auto block w-full text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors text-center hover:opacity-90"
-                    style={accentStyle}
-                  >
-                    More Details
-                  </a>
+                  {item.button_url && item.button_url !== "#" ? (
+                    <a
+                      href={item.button_url}
+                      className="mt-auto block w-full text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors text-center hover:opacity-90"
+                      style={accentStyle}
+                    >
+                      More Details
+                    </a>
+                  ) : null}
                 </div>
               )
               })}
@@ -622,57 +639,46 @@ export function Dashboard2Content(props: Dashboard2Data) {
         </section>
       )}
 
-      {/* Section 7: Spotlight Feature Header */}
-      <section id="spotlight-header" className="mb-5">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">In The Spotlight</h2>
-        <p className="text-sm text-gray-500">
-          Featured opportunities and highlights from the community
-        </p>
-      </section>
+      {hasSpotlight && (
+        <>
+          {/* Section 7: Spotlight Feature Header */}
+          <section id="spotlight-header" className="mb-5">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">In The Spotlight</h2>
+            <p className="text-sm text-gray-500">
+              Featured opportunities and highlights from the community
+            </p>
+          </section>
 
-      {/* Section 8: Spotlight Feature */}
-      {spotlight && (spotlight.headline || spotlight.media_url || spotlight.text) ? (
-        <section id="spotlight-feature" className="mb-10">
+          {/* Section 8: Spotlight Feature */}
+          <section id="spotlight-feature" className="mb-10">
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-              <div className="relative aspect-video lg:aspect-auto lg:min-h-[20rem] bg-gray-900 order-2 lg:order-1">
-                {isYouTubeUrl(spotlight.media_url) && getYouTubeEmbedUrl(spotlight.media_url) ? (
-                  <iframe
-                    src={getYouTubeEmbedUrl(spotlight.media_url)!}
-                    title={spotlight.headline || "Spotlight video"}
-                    className="absolute inset-0 w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : spotlight.media_url ? (
-                  <>
-                    <img
-                      className="absolute inset-0 w-full h-full object-cover opacity-90"
-                      src={spotlight.media_url}
-                      alt={spotlight.headline || "Spotlight"}
+              <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center bg-white order-2 lg:order-1">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-900 shadow-sm">
+                  {spotlight && isYouTubeUrl(spotlight.media_url) && getYouTubeEmbedUrl(spotlight.media_url) ? (
+                    <iframe
+                      src={getYouTubeEmbedUrl(spotlight.media_url)!}
+                      title={spotlight.headline || "Spotlight video"}
+                      className="absolute inset-0 w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-6 left-6">
-                      <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                        Featured
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <img
-                      className="absolute inset-0 w-full h-full object-cover opacity-90"
-                      src="https://storage.googleapis.com/uxpilot-auth.appspot.com/spotlight-feature.jpg"
-                      alt={spotlight.headline || "Featured"}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-6 left-6">
-                      <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                        Featured
-                      </span>
-                    </div>
-                  </>
-                )}
+                  ) : spotlight?.media_url ? (
+                    <>
+                      <img
+                        className="absolute inset-0 w-full h-full object-cover opacity-90"
+                        src={spotlight.media_url}
+                        alt={spotlight.headline || "Spotlight"}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-6 left-6">
+                        <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                          Featured
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
               </div>
               <div className="p-6 sm:p-8 lg:p-10 flex flex-col justify-center order-1 lg:order-2">
                 <div className="inline-flex items-center space-x-2 mb-4">
@@ -683,41 +689,31 @@ export function Dashboard2Content(props: Dashboard2Data) {
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
                   {spotlight.headline}
                 </h2>
-                <p className="text-gray-600 text-sm sm:text-base mb-6 leading-relaxed">
-                  {spotlight.text}
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href={spotlight.button_url || "#"}
-                    className="text-white font-semibold text-sm py-3 px-6 rounded-lg transition-colors shadow-sm text-center hover:opacity-90"
-                    style={accentStyle}
-                  >
-                    Explore Now
-                  </a>
-                </div>
+                {spotlight.text ? (
+                  <div className="text-gray-600 text-sm sm:text-base mb-6 leading-relaxed">
+                    {spotlight.text.split(/\r?\n/).map((para, i) => (
+                      <p key={i} className="mb-4 last:mb-0">
+                        {para}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+                {spotlight.button_url?.trim() ? (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <a
+                      href={spotlight.button_url.trim()}
+                      className="text-white font-semibold text-sm py-3 px-6 rounded-lg transition-colors shadow-sm text-center hover:opacity-90"
+                      style={accentStyle}
+                    >
+                      Explore Now
+                    </a>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
-        </section>
-      ) : (
-        <section id="spotlight-feature" className="mb-10">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-              <div className="relative h-64 lg:h-auto bg-gray-900 group cursor-pointer order-2 lg:order-1">
-                <img
-                  className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-70 transition-opacity"
-                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/spotlight-feature.jpg"
-                  alt="Featured"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              </div>
-              <div className="p-6 sm:p-8 lg:p-10 flex flex-col justify-center order-1 lg:order-2">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4">In The Spotlight</h2>
-                <p className="text-gray-600 text-sm sm:text-base">Featured opportunities will appear here.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+          </section>
+        </>
       )}
     </div>
   </>

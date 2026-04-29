@@ -45,6 +45,29 @@ async function verifyAdminAccess() {
   return { authorized: true, error: null }
 }
 
+export async function getAllMembers() {
+  const { authorized, error: authError } = await verifyAdminAccess()
+
+  if (!authorized) {
+    console.error("[Admin Members] Unauthorized access attempt")
+    return { success: false, error: authError || "Unauthorized" }
+  }
+
+  const supabase = createServiceRoleClient()
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, email, first_name, last_name, full_name, phone_number, plan_id, is_active, is_creator, created_at")
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("[Admin Members] Failed to fetch members:", error.message)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, data }
+}
+
 export async function updateMemberPlan(
   profileId: string,
   planId: string,

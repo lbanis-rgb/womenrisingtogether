@@ -82,6 +82,8 @@ export interface ExpertTagOption {
 export interface ProfileForExpertSelect {
   id: string
   full_name: string
+  display_name: string | null
+  email: string | null
   job_title: string | null
   avatar_url: string | null
   company: string | null
@@ -361,19 +363,16 @@ export async function getProfilesForExpertSelect(): Promise<{
   profiles: ProfileForExpertSelect[]
   error?: string
 }> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { profiles: [], error: "Not authenticated" }
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    return { profiles: [], error: authError || "Unauthorized" }
   }
+
+  const supabase = createServiceRoleClient()
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, job_title, avatar_url, company, bio, plan_id")
+    .select("id, full_name, display_name, email, job_title, avatar_url, company, bio, plan_id")
     .order("full_name", { ascending: true })
 
   if (error) {
@@ -381,5 +380,17 @@ export async function getProfilesForExpertSelect(): Promise<{
     return { profiles: [], error: "Failed to fetch profiles" }
   }
 
-  return { profiles: data ?? [] }
+  const profiles: ProfileForExpertSelect[] = (data ?? []).map((row) => ({
+    id: row.id,
+    full_name: row.full_name || row.display_name || row.email || "Unnamed Member",
+    display_name: row.display_name ?? null,
+    email: row.email ?? null,
+    job_title: row.job_title ?? null,
+    avatar_url: row.avatar_url ?? null,
+    company: row.company ?? null,
+    bio: row.bio ?? null,
+    plan_id: row.plan_id ?? null,
+  }))
+
+  return { profiles }
 }

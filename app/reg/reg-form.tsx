@@ -90,6 +90,8 @@ export default function RegForm({
   const [toast, setToast] = useState<string | null>(null)
 
   const brandLogoUrl = process.env.NEXT_PUBLIC_BRAND_LOGO_URL
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const shouldRenderRecaptcha = enableRecaptcha && !!recaptchaSiteKey
 
   const rawPid = searchParams.get("pid")
   const ntpRaw = searchParams.get("ntp")
@@ -145,7 +147,8 @@ export default function RegForm({
         email,
         password,
         phoneNumber,
-        captchaToken,
+        enableRecaptcha,
+        captchaToken: enableRecaptcha ? captchaToken : null,
       })
 
       if (!result.ok) {
@@ -322,11 +325,16 @@ export default function RegForm({
             error={errors.password}
           />
 
-          {enableRecaptcha && (
+          {shouldRenderRecaptcha && (
             <ReCAPTCHA
-              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+              sitekey={recaptchaSiteKey}
               onChange={(token) => setCaptchaToken(token)}
             />
+          )}
+          {enableRecaptcha && !recaptchaSiteKey && (
+            <p className="text-sm text-red-600" role="alert">
+              reCAPTCHA is enabled but the site key is not configured.
+            </p>
           )}
 
           {/* Submit Button */}

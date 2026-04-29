@@ -1,12 +1,54 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 
-export async function getMemberStats() {
-  const supabase = await createClient()
+function createServiceRoleClient() {
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return []
+      },
+      setAll() {},
+    },
+  })
+}
 
-  // Get total count
+async function verifyAdminAccess(): Promise<{ authorized: boolean; error: string | null }> {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll() {},
+      },
+    },
+  )
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { authorized: false, error: "Not authenticated" }
+  const { data: profile } = await supabase.from("profiles").select("is_creator").eq("id", user.id).single()
+  if (!profile?.is_creator) {
+    return { authorized: false, error: "Not authorized" }
+  }
+  return { authorized: true, error: null }
+}
+
+export async function getMemberStats() {
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    throw new Error(authError || "Not authorized")
+  }
+
+  const supabase = createServiceRoleClient()
+
   const { count: total, error: totalError } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true })
@@ -15,7 +57,6 @@ export async function getMemberStats() {
     throw new Error(totalError.message)
   }
 
-  // Get active count
   const { count: active, error: activeError } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true })
@@ -25,7 +66,6 @@ export async function getMemberStats() {
     throw new Error(activeError.message)
   }
 
-  // Get suspended count
   const { count: suspended, error: suspendedError } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true })
@@ -108,11 +148,16 @@ export async function deleteSiteUpdate(id: string) {
 }
 
 export async function getRecentMembers() {
-  const supabase = await createClient()
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    throw new Error(authError || "Not authorized")
+  }
+
+  const supabase = createServiceRoleClient()
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email, avatar_url, created_at, plans ( name )")
+    .select("id, full_name, display_name, email, avatar_url, created_at, plans ( name )")
     .order("created_at", { ascending: false })
     .limit(10)
 
@@ -120,10 +165,9 @@ export async function getRecentMembers() {
     throw new Error(error.message)
   }
 
-  // Flatten the result into UI-ready objects
   return (data || []).map((profile) => ({
     id: profile.id ?? "",
-    full_name: profile.full_name ?? "Unknown User",
+    full_name: profile.full_name || profile.display_name || profile.email || "Unknown User",
     email: profile.email ?? "No email",
     avatar_url: profile.avatar_url ?? null,
     created_at: profile.created_at ?? "",
@@ -135,19 +179,36 @@ export async function getRecentMembers() {
 }
 
 export async function getMembersByPlan() {
-  const supabase = await createClient()
-
-  // Query from plans table where active = true, embed profiles via FK
-  const { data, error } = await supabase.from("plans").select("id, name, profiles ( id )").eq("active", true)
-
-  if (error) {
-    throw new Error(error.message)
+  const { authorized, error: authError } = await verifyAdminAccess()
+  if (!authorized) {
+    throw new Error(authError || "Not authorized")
   }
 
-  // Return UI-ready array with counts
-  return (data || []).map((plan) => ({
+  const supabase = createServiceRoleClient()
+
+  const { data: plans, error: plansError } = await supabase.from("plans").select("id, name").eq("active", true)
+
+  if (plansError) {
+    throw new Error(plansError.message)
+  }
+
+  const { data: profiles, error: profilesError } = await supabase.from("profiles").select("plan_id")
+
+  if (profilesError) {
+    throw new Error(profilesError.message)
+  }
+
+  const countByPlanId = new Map<string, number>()
+  for (const row of profiles ?? []) {
+    const pid = row.plan_id
+    if (pid) {
+      countByPlanId.set(pid, (countByPlanId.get(pid) ?? 0) + 1)
+    }
+  }
+
+  return (plans ?? []).map((plan) => ({
     planId: plan.id ?? "",
     planName: plan.name ?? "Unknown Plan",
-    memberCount: plan.profiles && Array.isArray(plan.profiles) ? plan.profiles.length : 0,
+    memberCount: countByPlanId.get(plan.id) ?? 0,
   }))
 }

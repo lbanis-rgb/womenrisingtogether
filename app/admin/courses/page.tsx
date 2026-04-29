@@ -1,13 +1,27 @@
 import { redirect } from "next/navigation"
+import { createServerClient } from "@supabase/ssr"
 import { createClient } from "@/lib/supabase/server"
 import CourseTable from "@/components/admin/courses/CourseTable"
 
 export const dynamic = "force-dynamic"
 
+function createServiceRoleClient() {
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return []
+      },
+      setAll() {},
+    },
+  })
+}
+
 export default async function AdminCoursesPage() {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     redirect("/login")
@@ -27,7 +41,8 @@ export default async function AdminCoursesPage() {
     )
   }
 
-  const { data: courses } = await supabase
+  const serviceSupabase = createServiceRoleClient()
+  const { data: courses, error: coursesError } = await serviceSupabase
     .from("courses")
     .select(`
       id,
@@ -46,6 +61,24 @@ export default async function AdminCoursesPage() {
     `)
     .order("is_sponsored", { ascending: false })
     .order("created_at", { ascending: false })
+
+  if (coursesError) {
+    console.error("[AdminCoursesPage] courses query error:", coursesError)
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Admin • Courses
+          </h1>
+        </div>
+        <div className="rounded-md border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">
+            Unable to load courses right now. Please refresh and try again.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const rows = courses ?? []
 

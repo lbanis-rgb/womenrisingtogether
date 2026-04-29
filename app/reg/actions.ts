@@ -47,28 +47,31 @@ export async function registerUserWithRecaptcha(input: {
   email: string
   password: string
   phoneNumber?: string
-  captchaToken: string
+  enableRecaptcha?: boolean
+  captchaToken?: string | null
 }): Promise<{ ok: true; userId?: string } | { ok: false; error: string }> {
-  const { firstName, lastName, email, password, phoneNumber, captchaToken } = input
+  const { firstName, lastName, email, password, phoneNumber, enableRecaptcha = false, captchaToken } = input
 
-  if (!process.env.RECAPTCHA_SECRET_KEY) {
-    return { ok: false, error: "reCAPTCHA not configured" }
-  }
-  if (!captchaToken || captchaToken.trim() === "") {
-    return { ok: false, error: "Please complete the captcha" }
-  }
+  if (enableRecaptcha) {
+    if (!process.env.RECAPTCHA_SECRET_KEY) {
+      return { ok: false, error: "reCAPTCHA not configured" }
+    }
+    if (!captchaToken || captchaToken.trim() === "") {
+      return { ok: false, error: "Please complete the captcha" }
+    }
 
-  const verifyRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      secret: process.env.RECAPTCHA_SECRET_KEY,
-      response: captchaToken,
-    }).toString(),
-  })
-  const verify = (await verifyRes.json()) as { success?: boolean }
-  if (verify.success !== true) {
-    return { ok: false, error: "Captcha verification failed" }
+    const verifyRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: process.env.RECAPTCHA_SECRET_KEY,
+        response: captchaToken,
+      }).toString(),
+    })
+    const verify = (await verifyRes.json()) as { success?: boolean }
+    if (verify.success !== true) {
+      return { ok: false, error: "Captcha verification failed" }
+    }
   }
 
   const supabase = await createClient()

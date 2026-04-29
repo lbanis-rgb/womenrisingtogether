@@ -6,10 +6,12 @@ import { revalidatePath } from "next/cache"
 export async function approveCourse(courseId: string) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .update({ status: "approved" })
-    .eq("id", courseId)
+  const { error } = await supabase.from("courses").update({ status: "approved" }).eq("id", courseId)
+
+  if (error) {
+    console.error("[approveCourse]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")
@@ -18,10 +20,12 @@ export async function approveCourse(courseId: string) {
 export async function retireCourse(courseId: string) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .update({ status: "retired" })
-    .eq("id", courseId)
+  const { error } = await supabase.from("courses").update({ status: "retired" }).eq("id", courseId)
+
+  if (error) {
+    console.error("[retireCourse]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")
@@ -30,10 +34,12 @@ export async function retireCourse(courseId: string) {
 export async function restoreCourse(courseId: string) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .update({ status: "approved" })
-    .eq("id", courseId)
+  const { error } = await supabase.from("courses").update({ status: "approved" }).eq("id", courseId)
+
+  if (error) {
+    console.error("[restoreCourse]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")
@@ -42,10 +48,12 @@ export async function restoreCourse(courseId: string) {
 export async function toggleFeaturedCourse(courseId: string, featured: boolean) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .update({ featured: !featured })
-    .eq("id", courseId)
+  const { error } = await supabase.from("courses").update({ featured: !featured }).eq("id", courseId)
+
+  if (error) {
+    console.error("[toggleFeaturedCourse]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")
@@ -54,10 +62,12 @@ export async function toggleFeaturedCourse(courseId: string, featured: boolean) 
 export async function deleteCourse(courseId: string) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .delete()
-    .eq("id", courseId)
+  const { error } = await supabase.from("courses").delete().eq("id", courseId)
+
+  if (error) {
+    console.error("[deleteCourse]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
 }
@@ -65,15 +75,19 @@ export async function deleteCourse(courseId: string) {
 export async function sponsorCourse(courseId: string) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .update({ is_sponsored: false })
-    .eq("is_sponsored", true)
+  const { error: clearError } = await supabase.from("courses").update({ is_sponsored: false }).eq("is_sponsored", true)
 
-  await supabase
-    .from("courses")
-    .update({ is_sponsored: true })
-    .eq("id", courseId)
+  if (clearError) {
+    console.error("[sponsorCourse] clear sponsored", clearError)
+    return
+  }
+
+  const { error } = await supabase.from("courses").update({ is_sponsored: true }).eq("id", courseId)
+
+  if (error) {
+    console.error("[sponsorCourse]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")
@@ -82,10 +96,12 @@ export async function sponsorCourse(courseId: string) {
 export async function unsponsorCourse(courseId: string) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .update({ is_sponsored: false })
-    .eq("id", courseId)
+  const { error } = await supabase.from("courses").update({ is_sponsored: false }).eq("id", courseId)
+
+  if (error) {
+    console.error("[unsponsorCourse]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")
@@ -94,10 +110,12 @@ export async function unsponsorCourse(courseId: string) {
 export async function updateCourseStatus(courseId: string, status: string) {
   const supabase = await createClient()
 
-  await supabase
-    .from("courses")
-    .update({ status })
-    .eq("id", courseId)
+  const { error } = await supabase.from("courses").update({ status }).eq("id", courseId)
+
+  if (error) {
+    console.error("[updateCourseStatus]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")
@@ -111,7 +129,7 @@ export async function updateCourseStripeDetails(
 ) {
   const supabase = await createClient()
 
-  await supabase
+  const { error } = await supabase
     .from("courses")
     .update({
       price,
@@ -119,6 +137,11 @@ export async function updateCourseStripeDetails(
       payment_url,
     })
     .eq("id", courseId)
+
+  if (error) {
+    console.error("[updateCourseStripeDetails]", error)
+    return
+  }
 
   revalidatePath("/admin/courses")
   revalidatePath("/members/courses")

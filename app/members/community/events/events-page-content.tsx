@@ -37,16 +37,27 @@ function getEventTypeBadgeColor(type: string): string {
   return colors[type] || "bg-gray-600"
 }
 
-function formatEventDate(startDate: string, endDate: string | null): string {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
+function formatDateOnly(dateStr: string): string {
+  if (!dateStr) return ""
+  const [year, month, day] = dateStr.split("T")[0].split("-").map(Number)
+  if (!year || !month || !day) return dateStr
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
 
+function toDateInputValue(dateStr?: string | null): string {
+  if (!dateStr) return ""
+  return dateStr.split("T")[0]
+}
+
+function formatEventDate(startDate: string, endDate: string | null): string {
   if (endDate) {
-    return `${formatDate(startDate)} – ${formatDate(endDate)}`
+    return `${formatDateOnly(startDate)} – ${formatDateOnly(endDate)}`
   }
-  return formatDate(startDate)
+  return formatDateOnly(startDate)
 }
 
 function EventCard({
@@ -170,8 +181,8 @@ function CreateEventModal({
     if (event) {
       setTitle(event.title)
       setEventType(event.eventType)
-      setStartDate(event.startDate ? event.startDate.split("T")[0] : "")
-      setEndDate(event.endDate ? event.endDate.split("T")[0] : "")
+      setStartDate(toDateInputValue(event.startDate))
+      setEndDate(toDateInputValue(event.endDate))
       setTimeLabel(event.timeLabel)
       setCost(event.costLabel || "")
       setShortDescription(event.shortDescription)

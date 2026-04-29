@@ -44,6 +44,18 @@ export type Dashboard2Data = {
   inboxActivity: InboxActivity
 }
 
+const FEATURED_SECTION_KEYS = [
+  "groups",
+  "courses",
+  "masterclasses",
+  "experts",
+  "content",
+  "businesses",
+  "products",
+  "services",
+  "tools",
+] as const
+
 function getMasterclassImageUrl(imagePath: string | null): string | null {
   if (!imagePath?.trim()) return null
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
@@ -59,7 +71,7 @@ export async function getDashboard2Data(): Promise<Dashboard2Data> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name, full_name, avatar_url, bio, social_links")
+    .select("first_name, full_name, avatar_url, bio, social_links, plan_id")
     .eq("id", user?.id ?? "")
     .maybeSingle()
 
@@ -94,6 +106,10 @@ export async function getDashboard2Data(): Promise<Dashboard2Data> {
   const creatorHeadline = (typeof dashboard.creator_headline === "string" ? dashboard.creator_headline : "") || ""
   const creatorMessage = typeof dashboard.creator_message === "string" ? dashboard.creator_message : null
   const creatorVideoUrl = typeof dashboard.creator_video_url === "string" ? dashboard.creator_video_url : null
+  const planMessages =
+    dashboard.plan_messages && typeof dashboard.plan_messages === "object"
+      ? (dashboard.plan_messages as Record<string, Record<string, unknown>>)
+      : {}
   const rawWeeklyItems: WeeklyItem[] = Array.isArray(dashboard.weekly_items) ? dashboard.weekly_items : []
   const weeklyItems: WeeklyItem[] = rawWeeklyItems.filter(
     (event) => event?.title && typeof event.title === "string" && event.title.trim().length > 0
@@ -108,6 +124,44 @@ export async function getDashboard2Data(): Promise<Dashboard2Data> {
     typeof dashboard.header_image_url === "string" && dashboard.header_image_url.trim()
       ? dashboard.header_image_url.trim()
       : null
+
+  let resolvedPlanName: string | null = null
+  let resolvedPlanSlug: string | null = null
+  const planId = typeof (profile as Record<string, unknown> | null)?.plan_id === "string"
+    ? ((profile as Record<string, unknown>).plan_id as string)
+    : null
+
+  if (planId) {
+    const { data: planData } = await supabase
+      .from("plans")
+      .select("id, name, slug")
+      .eq("id", planId)
+      .maybeSingle()
+    resolvedPlanName = typeof planData?.name === "string" ? planData.name : null
+    resolvedPlanSlug = typeof planData?.slug === "string" ? planData.slug : null
+  }
+
+  const normalizePlanKey = (value: string) => value.trim().toLowerCase().replace(/\s+/g, "_")
+  const planKeyCandidates = [planId, resolvedPlanSlug, resolvedPlanName]
+    .filter((value): value is string => Boolean(value && value.trim()))
+    .flatMap((value) => [value, normalizePlanKey(value)])
+
+  const matchingPlanMessage = planKeyCandidates
+    .map((key) => planMessages[key])
+    .find((entry) => entry && typeof entry === "object")
+
+  const resolvedCreatorHeadline =
+    typeof matchingPlanMessage?.creator_headline === "string"
+      ? matchingPlanMessage.creator_headline
+      : creatorHeadline
+  const resolvedCreatorMessage =
+    typeof matchingPlanMessage?.creator_message === "string"
+      ? matchingPlanMessage.creator_message
+      : creatorMessage
+  const resolvedCreatorVideoUrl =
+    typeof matchingPlanMessage?.creator_video_url === "string"
+      ? matchingPlanMessage.creator_video_url
+      : creatorVideoUrl
 
   const sectionIds = {
     groups: featuredSections.groups || [],
@@ -204,6 +258,22 @@ export async function getDashboard2Data(): Promise<Dashboard2Data> {
   const products = preserveOrder(productsRes.data || [], sectionIds.products).slice(0, 3)
   const services = preserveOrder(servicesRes.data || [], sectionIds.services).slice(0, 3)
   const tools = preserveOrder(toolsRes.data || [], sectionIds.tools).slice(0, 3)
+  const resolvedFeaturedSections = {
+    groups,
+    courses,
+    masterclasses,
+    experts,
+    content,
+    businesses,
+    products,
+    services,
+    tools,
+  } as Record<string, unknown[]>
+  for (const key of FEATURED_SECTION_KEYS) {
+    if (!Array.isArray(resolvedFeaturedSections[key])) {
+      resolvedFeaturedSections[key] = []
+    }
+  }
 
   let inboxActivity: InboxActivity = { unreadMessages: 0, siteUpdates: 0, groupMessages: 0 }
   if (user?.id) {
@@ -234,23 +304,14 @@ export async function getDashboard2Data(): Promise<Dashboard2Data> {
   return {
     displayName,
     profileCompletePercent,
-    creatorHeadline,
-    creatorMessage,
-    creatorVideoUrl,
-    creatorVideoThumbnailUrl: getYouTubeThumbnail(creatorVideoUrl) || "https://storage.googleapis.com/uxpilot-auth.appspot.com/founder-message-video.jpg",
+    creatorHeadline: resolvedCreatorHeadline,
+    creatorMessage: resolvedCreatorMessage,
+    creatorVideoUrl: resolvedCreatorVideoUrl,
+    creatorVideoThumbnailUrl:
+      getYouTubeThumbnail(resolvedCreatorVideoUrl) || "https://storage.googleapis.com/uxpilot-auth.appspot.com/founder-message-video.jpg",
     headerImageUrl,
     weeklyItems,
-    featuredSections: {
-      groups,
-      courses,
-      masterclasses,
-      experts,
-      content,
-      businesses,
-      products,
-      services,
-      tools,
-    },
+    featuredSections: resolvedFeaturedSections,
     spotlight,
     brandAccentColor,
     inboxActivity,

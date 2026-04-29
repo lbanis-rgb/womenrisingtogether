@@ -259,6 +259,13 @@ function formatRelativeTime(dateString: string): string {
   return date.toLocaleDateString()
 }
 
+function toDatetimeLocalValue(value?: string | null) {
+  if (!value) return ""
+  const date = new Date(value)
+  const offsetMs = date.getTimezoneOffset() * 60000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
 function getFilenameFromUrl(url: string): string {
   try {
     const urlObj = new URL(url)
@@ -1060,9 +1067,9 @@ export default function GroupDetailPage() {
     const formData = new FormData()
     formData.append("name", eventForm.name) // Appending the event name
     formData.append("eventType", eventForm.eventType)
-    formData.append("startDate", eventForm.startDate)
+    formData.append("startDate", new Date(eventForm.startDate).toISOString())
     // Use `endDate` (from eventForm state) for event creation
-    formData.append("endDate", eventForm.endDate)
+    formData.append("endDate", eventForm.endDate ? new Date(eventForm.endDate).toISOString() : "")
     formData.append("description", eventForm.description)
     formData.append("intention", eventForm.intention)
     formData.append("imageUrl", eventForm.imageUrl)
@@ -1121,8 +1128,8 @@ export default function GroupDetailPage() {
       name: event.title, // Use event.title for the name field
       eventType: event.event_type,
       // Format startDate and endDate correctly for datetime-local input
-      startDate: event.start_at ? event.start_at.slice(0, 16) : "",
-      endDate: event.end_at ? event.end_at.slice(0, 16) : "", // Use event.end_at
+      startDate: toDatetimeLocalValue(event.start_at),
+      endDate: toDatetimeLocalValue(event.end_at), // Use event.end_at
       description: event.description || "",
       intention: event.intention || "",
       imageUrl: event.image_url || "",
@@ -1143,11 +1150,11 @@ export default function GroupDetailPage() {
     formData.append("name", eventDetailsForm.name)
     formData.append("eventType", eventDetailsForm.eventType)
     // Append startDate and endTime correctly
-    formData.append("startDate", eventDetailsForm.startDate)
-    formData.append("endDate", eventDetailsForm.endDate) // Use eventDetailsForm.endDate
+    formData.append("startDate", new Date(eventDetailsForm.startDate).toISOString())
+    formData.append("endDate", eventDetailsForm.endDate ? new Date(eventDetailsForm.endDate).toISOString() : "") // Use eventDetailsForm.endDate
     formData.append("description", eventDetailsForm.description)
     formData.append("intention", eventDetailsForm.intention)
-    formData.append("imageUrl", eventForm.imageUrl)
+    formData.append("imageUrl", eventDetailsForm.imageUrl)
     formData.append("accessDetails", eventDetailsForm.accessDetails)
     formData.append("additionalInfoLink", eventDetailsForm.additionalInfoLink)
 
@@ -1248,8 +1255,8 @@ export default function GroupDetailPage() {
     const formData = new FormData()
     formData.append("name", eventForm.name)
     formData.append("eventType", eventForm.eventType)
-    formData.append("startDate", eventForm.startDate)
-    formData.append("endDate", eventForm.endDate)
+    formData.append("startDate", new Date(eventForm.startDate).toISOString())
+    formData.append("endDate", eventForm.endDate ? new Date(eventForm.endDate).toISOString() : "")
     formData.append("description", eventForm.description)
     formData.append("intention", eventForm.intention)
     formData.append("imageUrl", eventForm.imageUrl)
@@ -1343,8 +1350,8 @@ export default function GroupDetailPage() {
       setEventForm({
         name: event.title || "",
         eventType: event.event_type || "",
-        startDate: event.start_at ? event.start_at.slice(0, 16) : "",
-        endDate: event.end_at ? event.end_at.slice(0, 16) : "",
+        startDate: toDatetimeLocalValue(event.start_at),
+        endDate: toDatetimeLocalValue(event.end_at),
         description: event.description || "",
         intention: event.intention || "",
         imageUrl: event.image_url || "",
@@ -3663,8 +3670,8 @@ export default function GroupDetailPage() {
                                 setEventForm({
                                   name: event.title || "",
                                   eventType: event.event_type || "",
-                                  startDate: event.start_at ? event.start_at.slice(0, 16) : "",
-                                  endDate: event.end_at ? event.end_at.slice(0, 16) : "",
+                                  startDate: toDatetimeLocalValue(event.start_at),
+                                  endDate: toDatetimeLocalValue(event.end_at),
                                   description: event.description || "",
                                   intention: event.intention || "",
                                   imageUrl: event.image_url || "",

@@ -3,6 +3,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
+function normalizeDateOnly(value?: string | null): string | null {
+  if (!value) return null
+  return value.split("T")[0]
+}
+
 export type CommunityEventListItem = {
   id: string
   title: string
@@ -161,12 +166,17 @@ export async function createCommunityEvent(input: {
   if (authError || !user) {
     throw new Error("Not authenticated")
   }
+  const normalizedStartDate = normalizeDateOnly(input.startDate)
+  const normalizedEndDate = normalizeDateOnly(input.endDate)
+  if (!normalizedStartDate) {
+    throw new Error("Start date is required")
+  }
 
   const { error } = await supabase.from("community_events").insert({
     title: input.title,
     event_type: input.eventType,
-    start_date: input.startDate,
-    end_date: input.endDate,
+    start_date: normalizedStartDate,
+    end_date: normalizedEndDate,
     time_label: input.timeLabel,
     cost_label: input.costLabel,
     short_description: input.shortDescription,
@@ -241,6 +251,11 @@ export async function updateCommunityEvent(input: {
   if (authError || !user) {
     return { success: false, error: "Not authenticated" }
   }
+  const normalizedStartDate = normalizeDateOnly(input.start_date)
+  const normalizedEndDate = normalizeDateOnly(input.end_date)
+  if (!normalizedStartDate) {
+    return { success: false, error: "Start date is required" }
+  }
 
   const { error, count } = await supabase
     .from("community_events")
@@ -249,8 +264,8 @@ export async function updateCommunityEvent(input: {
       short_description: input.short_description,
       full_description: input.full_description,
       event_type: input.event_type,
-      start_date: input.start_date,
-      end_date: input.end_date ?? null,
+      start_date: normalizedStartDate,
+      end_date: normalizedEndDate,
       time_label: input.time_label,
       cost_label: input.cost_label ?? null,
       event_url: input.event_url,

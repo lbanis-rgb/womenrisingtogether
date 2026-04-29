@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
-import { updateMemberPlan, updateMemberStatus, updateMemberAdminAccess } from "./actions"
+import { getAllMembers, updateMemberPlan, updateMemberStatus, updateMemberAdminAccess } from "./actions"
 import { sendAdminMessage } from "@/app/admin/actions/send-message"
 import {
   DropdownMenu,
@@ -84,40 +84,36 @@ export default function AdminMembersPage() {
         setAvailablePlans(plansData)
       }
 
-      // Fetch members from profiles
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, email, first_name, last_name, full_name, phone_number, plan_id, is_active, is_creator, created_at")
-        .order("created_at", { ascending: false })
+      const result = await getAllMembers()
 
-      if (error) {
-        console.error("[Admin Members] Failed to fetch members:", error.message)
-        setLoading(false)
+      if (!result.success) {
+        console.error("[Admin Members] Failed to fetch members:", result.error)
         setMembersData([])
         setFilteredMembers([])
+        setLoading(false)
         return
       }
 
-      if (data) {
-        const members: Member[] = data.map((profile) => ({
-          id: profile.id,
-          email: profile.email || "",
-          first_name: profile.first_name ?? null,
-          last_name: profile.last_name ?? null,
-          full_name: profile.full_name,
-          phone_number: profile.phone_number ?? null,
-          plan_id: profile.plan_id,
-          plan_name: profile.plan_id
-            ? plansMap.get(profile.plan_id) || (plansError ? "Unknown Plan" : "No Plan")
-            : "No Plan",
-          is_active: profile.is_active ?? true,
-          is_creator: profile.is_creator ?? false,
-          created_at: profile.created_at,
-        }))
+      const data = result.data ?? []
 
-        setMembersData(members)
-        setFilteredMembers(members)
-      }
+      const members: Member[] = data.map((profile) => ({
+        id: profile.id,
+        email: profile.email || "",
+        first_name: profile.first_name ?? null,
+        last_name: profile.last_name ?? null,
+        full_name: profile.full_name,
+        phone_number: profile.phone_number ?? null,
+        plan_id: profile.plan_id,
+        plan_name: profile.plan_id
+          ? plansMap.get(profile.plan_id) || (plansError ? "Unknown Plan" : "No Plan")
+          : "No Plan",
+        is_active: profile.is_active ?? true,
+        is_creator: profile.is_creator ?? false,
+        created_at: profile.created_at,
+      }))
+
+      setMembersData(members)
+      setFilteredMembers(members)
 
       setLoading(false)
     }

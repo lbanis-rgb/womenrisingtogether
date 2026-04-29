@@ -16,6 +16,13 @@ const resolveAuthorName = (profiles: any): string => {
   return profiles.full_name || profiles.first_name || profiles.display_name || "Unknown"
 }
 
+const normalizeIsoDate = (value: string | null) => {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString()
+}
+
 async function getGroupPermissionFlags(supabase: any, groupId: string, userId: string) {
   const { data: groupData } = await supabase.from("groups").select("created_by").eq("id", groupId).single()
   const isGroupOwner = groupData?.created_by === userId
@@ -671,14 +678,19 @@ export async function createGroupEvent(
   if (!eventType) {
     return { success: false, error: "Event type is required" }
   }
+  const normalizedStartDate = normalizeIsoDate(startDate)
+  const normalizedEndDate = normalizeIsoDate(endDate)
+  if (!normalizedStartDate) {
+    return { success: false, error: "Invalid start date" }
+  }
 
   const payload = {
     group_id: groupId,
     created_by: user.id,
     title: name.trim(), // form "name" -> db "title"
     event_type: eventType,
-    start_at: startDate,
-    end_at: endDate || null,
+    start_at: normalizedStartDate,
+    end_at: normalizedEndDate,
     description: description?.trim() || null,
     intention: intention?.trim() || null,
     image_url: imageUrl?.trim() || null,
@@ -807,12 +819,17 @@ export async function updateGroupEvent(
   if (!eventType) {
     return { success: false, error: "Event type is required" }
   }
+  const normalizedStartDate = normalizeIsoDate(startDate)
+  const normalizedEndDate = normalizeIsoDate(endDate)
+  if (!normalizedStartDate) {
+    return { success: false, error: "Invalid start date" }
+  }
 
   const payload: Record<string, any> = {
     title: name.trim(),
     event_type: eventType,
-    start_at: startDate,
-    end_at: endDate || null,
+    start_at: normalizedStartDate,
+    end_at: normalizedEndDate,
     description: description?.trim() || null,
     intention: intention?.trim() || null,
     image_url: imageUrl?.trim() || null,
