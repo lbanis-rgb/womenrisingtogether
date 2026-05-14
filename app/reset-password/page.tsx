@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/browser"
+import { templatePageTitle } from "@/lib/template-page-title"
 
 export default function ResetPasswordPage() {
   const supabase = createClient()
@@ -56,7 +57,7 @@ export default function ResetPasswordPage() {
 
   return (
     <>
-      <title>Reset Password | My JV Manager</title>
+      <title>{templatePageTitle("Reset Password")}</title>
 
       <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-slate-50">
         <div className="w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white p-6 md:p-8 shadow-lg">

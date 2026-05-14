@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { templatePageTitle } from "@/lib/template-page-title"
 import RegForm from "./reg-form"
 
 export default async function RegPage() {
@@ -19,7 +20,7 @@ export default async function RegPage() {
 
   return (
     <>
-      <title>Register | My JV Manager</title>
+      <title>{templatePageTitle("Register")}</title>
       <RegForm
         termsUrl={termsUrl}
         privacyUrl={privacyUrl}

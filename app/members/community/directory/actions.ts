@@ -10,6 +10,18 @@ type GetDirectoryMembersInput = {
   country?: string
 }
 
+/** Escape `%`, `_`, and `\` for use inside Postgres ILIKE patterns. */
+function escapeIlikePattern(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
+}
+
+/**
+ * PostgREST `.or()` splits on commas — strip/replace commas in user input so the filter string stays valid.
+ */
+function sanitizeForPostgrestOr(value: string): string {
+  return escapeIlikePattern(value).replace(/,/g, " ").trim()
+}
+
 function normalizeSocial(raw: unknown): {
   linkedin: string | null
   youtube: string | null
@@ -33,7 +45,6 @@ function normalizeSocial(raw: unknown): {
 
   if (!raw || typeof raw !== "object") return defaults
 
-  // Handle array format: [{ platform: "linkedin", url: "..." }, ...]
   if (Array.isArray(raw)) {
     const result = { ...defaults }
     for (const item of raw) {
@@ -47,7 +58,6 @@ function normalizeSocial(raw: unknown): {
     return result
   }
 
-  // Handle object format: { linkedin: "...", twitter: "..." }
   const obj = raw as Record<string, unknown>
   return {
     linkedin: typeof obj.linkedin === "string" ? obj.linkedin : null,
@@ -61,54 +71,44 @@ function normalizeSocial(raw: unknown): {
   }
 }
 
+type ProfileRow = {
+  id: string
+  full_name: string | null
+  first_name: string | null
+  last_name: string | null
+  display_name: string | null
+  avatar_url: string | null
+  company: string | null
+  job_title: string | null
+  bio: string | null
+  city: string | null
+  country: string | null
+  social_links: unknown
+}
+
+function resolveMemberDisplayName(profile: ProfileRow | null): string | null {
+  if (!profile) return null
+  const dn = profile.display_name?.trim()
+  if (dn) return dn
+  const fn = profile.full_name?.trim()
+  if (fn) return fn
+  const parts = [profile.first_name, profile.last_name].filter((s) => s != null && String(s).trim() !== "")
+  if (parts.length > 0) return parts.map((s) => String(s).trim()).join(" ")
+  return null
+}
+
 export async function getDirectoryMembers(input: GetDirectoryMembersInput = {}) {
   const supabase = await createClient()
 
-  // 1. Auth check
-  const { data: authData, error: authErr } = await supabase.auth.getUser()
-  const authUser = authData?.user?.id ?? null
-  const authError = authErr?.message ?? null
-
-  // 2. Raw directory_members count
-  const { count: directoryMembersCount, error: dmErr } = await supabase
-    .from("directory_members")
-    .select("user_id", { count: "exact", head: true })
-  const directoryMembersError = dmErr?.message ?? null
-
-  // 3. Raw profiles count (limit 5)
   const {
-    data: profilesData,
-    count: profilesCount,
-    error: profErr,
-  } = await supabase.from("profiles").select("id, full_name", { count: "exact" }).limit(5)
-  const profilesError = profErr?.message ?? null
-
-  // 4. FK embed test
-  const { data: embedRows, error: embedErr } = await supabase
-    .from("directory_members")
-    .select(`
-      user_id,
-      profiles!directory_members_user_id_fkey (
-        id,
-        full_name
-      )
-    `)
-    .limit(5)
-  const embedError = embedErr?.message ?? null
-
-  const debug = {
-    authUser,
-    authError,
-    directoryMembersCount,
-    directoryMembersError,
-    profilesCount,
-    profilesError,
-    embedRows,
-    embedError,
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { members: [], totalCount: 0, error: "You must be signed in to view the directory." }
   }
 
-  const page = input.page ?? 1
-  const pageSize = input.pageSize ?? 20
+  const page = Math.max(1, input.page ?? 1)
+  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 20))
   const nameFilter = (input.name ?? "").trim()
   const cityFilter = (input.city ?? "").trim()
   const countryFilter = (input.country ?? "").trim()
@@ -120,9 +120,12 @@ export async function getDirectoryMembers(input: GetDirectoryMembersInput = {}) 
     `
       user_id,
       created_at,
-      profiles!directory_members_user_id_fkey (
+      profiles!inner (
         id,
         full_name,
+        first_name,
+        last_name,
+        display_name,
         avatar_url,
         company,
         job_title,
@@ -135,17 +138,22 @@ export async function getDirectoryMembers(input: GetDirectoryMembersInput = {}) 
     { count: "exact" },
   )
 
-  // Apply name filter (ILIKE on embedded profiles)
   if (nameFilter.length > 0) {
-    query = query.ilike("profiles.full_name", `%${nameFilter}%`)
+    const safe = sanitizeForPostgrestOr(nameFilter)
+    if (safe.length > 0) {
+      const pattern = `%${safe}%`
+      query = query.or(
+        `full_name.ilike.${pattern},display_name.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},company.ilike.${pattern}`,
+        { foreignTable: "profiles" },
+      )
+    }
   }
 
-  // Apply city filter (ILIKE on embedded profiles)
   if (cityFilter.length > 0) {
-    query = query.ilike("profiles.city", `%${cityFilter}%`)
+    const pattern = `%${escapeIlikePattern(cityFilter)}%`
+    query = query.ilike("profiles.city", pattern)
   }
 
-  // Apply country filter (exact match on embedded profiles)
   if (countryFilter.length > 0) {
     query = query.eq("profiles.country", countryFilter)
   }
@@ -155,33 +163,23 @@ export async function getDirectoryMembers(input: GetDirectoryMembersInput = {}) 
   const { data: rows, error, count } = await query
 
   if (error || !rows) {
+    console.error("[getDirectoryMembers] query failed:", error)
     return {
-      debug,
       members: [],
-      totalCount: count ?? 0,
-      error: error?.message ?? null,
+      totalCount: 0,
+      error: error?.message ?? "Failed to load directory",
     }
   }
 
   const members = rows
     .filter((row) => row.profiles !== null)
     .map((row) => {
-      const profile = row.profiles as {
-        id: string
-        full_name: string | null
-        avatar_url: string | null
-        company: string | null
-        job_title: string | null
-        bio: string | null
-        city: string | null
-        country: string | null
-        social_links: unknown
-      } | null
+      const profile = row.profiles as ProfileRow | null
 
       return {
         id: row.user_id,
         memberSince: row.created_at,
-        name: profile?.full_name ?? null,
+        name: resolveMemberDisplayName(profile) ?? "",
         avatarUrl: profile?.avatar_url ?? null,
         businessName: profile?.company ?? null,
         expertise: profile?.job_title ?? null,
@@ -191,7 +189,6 @@ export async function getDirectoryMembers(input: GetDirectoryMembersInput = {}) 
     })
 
   return {
-    debug,
     members,
     totalCount: count ?? members.length,
     error: null,

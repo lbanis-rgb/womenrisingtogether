@@ -1,11 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState, useRef } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { useMemo } from "react"
+import { useEffect, useState, useRef, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Image from "next/image"
 import { Users, Search, Plus, ChevronDown, MoreVertical } from "lucide-react"
 import {
   DropdownMenu,
@@ -32,6 +30,15 @@ import { joinGroupByInviteCode } from "./actions/join-by-invite-code" // Import 
 // Utility function for class names
 function cx(...classes: (string | false | undefined)[]) {
   return classes.filter(Boolean).join(" ")
+}
+
+function groupListingFormVisibility(g: GroupForListing): "public" | "request" | "private" {
+  if (g.visibility === "public" || g.visibility === "request" || g.visibility === "private") {
+    return g.visibility
+  }
+  if (g.joinPolicy === "request") return "request"
+  if (g.joinPolicy === "private") return "private"
+  return "public"
 }
 
 // Role badge component
@@ -106,6 +113,13 @@ function GroupCard({
     // 1. Membership check first - if member, show Access button
     if (isMember) {
       return { text: "Access", className: "bg-blue-600 text-white hover:bg-blue-700", disabled: false }
+    }
+    if (group.joinPolicy === "private") {
+      return {
+        text: "Invite only",
+        className: "bg-gray-400 text-white cursor-not-allowed",
+        disabled: true,
+      }
     }
     // 2. Open join policy - show Join button
     if (group.joinPolicy === "open") {
@@ -286,6 +300,10 @@ function GroupsToolbar({
   onCreateGroup,
   categories,
   onJoinWithInvite,
+  shouldShowRequestsQuickLink,
+  isRequestsQuickLinkActive,
+  onRequestsClick,
+  pendingJoinRequestsCount,
 }: {
   activeTab: string
   onTabChange: (tab: string) => void
@@ -296,6 +314,10 @@ function GroupsToolbar({
   onCreateGroup: () => void
   categories: { id: string; name: string }[]
   onJoinWithInvite: () => void
+  shouldShowRequestsQuickLink?: boolean
+  isRequestsQuickLinkActive?: boolean
+  onRequestsClick?: () => void
+  pendingJoinRequestsCount?: number
 }) {
   return (
     <div className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-4 sticky top-0 z-10">
@@ -314,6 +336,28 @@ function GroupsToolbar({
               {tab === "all" ? "All" : tab === "joined" ? "Joined" : "Moderating"}
             </button>
           ))}
+          {shouldShowRequestsQuickLink && onRequestsClick && (
+            <button
+              type="button"
+              onClick={onRequestsClick}
+              className={cx(
+                "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                isRequestsQuickLinkActive ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200",
+              )}
+            >
+              <span>Requests</span>
+              {(pendingJoinRequestsCount ?? 0) > 0 && (
+                <span
+                  className={cx(
+                    "ml-1.5 min-w-[1.25rem] px-1.5 py-0.5 text-xs font-semibold rounded-full text-center leading-none",
+                    isRequestsQuickLinkActive ? "bg-white/25 text-white" : "bg-red-500 text-white",
+                  )}
+                >
+                  {pendingJoinRequestsCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Right: Filters */}
@@ -407,19 +451,20 @@ function CreateGroupModal({
   const [avatarImage, setAvatarImage] = useState<File | null>(null)
 
   useEffect(() => {
-    if (open) {
-      setCategoryId("")
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (initialGroup && open) {
+    if (!open) return
+    if (initialGroup) {
       setName(initialGroup.name)
       setSlug(initialGroup.slug)
+      setSlugManuallyEdited(true)
       setDescription(initialGroup.description || "")
+      setVisibility(groupListingFormVisibility(initialGroup))
+      setInviteCode(initialGroup.inviteCode ?? "")
+      setCategoryId(initialGroup.categoryIds?.[0] ?? "")
       setExistingListingImageUrl(initialGroup.listingImageUrl || null)
+    } else {
+      setCategoryId("")
     }
-  }, [initialGroup, open])
+  }, [open, initialGroup])
 
   useEffect(() => {
     if (!canCreatePrivateGroup && visibility === "private") {
@@ -474,8 +519,12 @@ function CreateGroupModal({
       return
     }
     if (visibility === "private" && !inviteCode.trim()) {
-      setError("Invite code is required for private groups")
-      return
+      const initialVis = initialGroup ? groupListingFormVisibility(initialGroup) : null
+      const hadStoredInvite = !!(initialGroup?.inviteCode?.trim())
+      if (!isEditing || (initialVis !== "private" && !hadStoredInvite)) {
+        setError("Invite code is required for private groups")
+        return
+      }
     }
 
     setIsPending(true)
@@ -536,6 +585,14 @@ function CreateGroupModal({
           }
         }
 
+        const trimmedInvite = inviteCode.trim()
+        const invite_code: string | undefined =
+          visibility === "private"
+            ? isEditing && !trimmedInvite
+              ? undefined
+              : trimmedInvite || undefined
+            : undefined
+
         const input: CreateGroupInput = {
           name: name.trim(),
           slug: slug.trim(),
@@ -545,7 +602,7 @@ function CreateGroupModal({
           listing_image_url,
           header_image_url,
           avatar_url,
-          invite_code: visibility === "private" ? inviteCode.trim() : undefined,
+          invite_code,
         }
 
         const result = isEditing
@@ -899,6 +956,14 @@ function GroupDetailsModal({
         className: "bg-blue-600 text-white hover:bg-blue-700",
       }
     }
+    if (group.joinPolicy === "private") {
+      return {
+        text: "Invite only",
+        onClick: () => {},
+        disabled: true,
+        className: "bg-gray-400 text-white cursor-not-allowed",
+      }
+    }
     if (group.joinPolicy === "open") {
       return {
         text: "Join",
@@ -1207,6 +1272,8 @@ export function GroupsListingUI({
     if (group.joinPolicy === "open") {
       setJoinModalGroup(group)
       setIsJoinModalOpen(true)
+    } else if (group.joinPolicy === "private") {
+      setIsInviteModalOpen(true)
     } else {
       setRequestModalGroup(group)
       setIsRequestModalOpen(true)
@@ -1274,11 +1341,39 @@ export function GroupsListingUI({
     }
   }
 
+  const hasRequestModerationGroups = useMemo(() => {
+    return (groups ?? []).some(
+      (g) =>
+        g &&
+        g.status === "active" &&
+        g.deleted_at == null &&
+        g.joinPolicy === "request" &&
+        (g.role === "owner" || g.role === "admin"),
+    )
+  }, [groups])
+
+  const shouldShowRequestsQuickLink =
+    (adminJoinRequests?.length ?? 0) > 0 || hasRequestModerationGroups
+
+  const pendingJoinRequestsCount = adminJoinRequests?.length ?? 0
+
+  const handleMainTabChange = (tab: string) => {
+    setSelectedTab(tab as "all" | "joined" | "moderating")
+    if (tab === "moderating") {
+      setModeratingSubTab("groups")
+    }
+  }
+
+  const handleRequestsQuickLinkClick = () => {
+    setSelectedTab("moderating")
+    setModeratingSubTab("requests")
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <GroupsToolbar
         activeTab={selectedTab}
-        onTabChange={setSelectedTab}
+        onTabChange={handleMainTabChange}
         searchQuery={searchTerm}
         onSearchChange={setSearchTerm}
         selectedTopic={selectedTopic}
@@ -1286,6 +1381,10 @@ export function GroupsListingUI({
         onCreateGroup={handleCreateGroupClick}
         categories={categories}
         onJoinWithInvite={() => setIsInviteModalOpen(true)}
+        shouldShowRequestsQuickLink={shouldShowRequestsQuickLink}
+        isRequestsQuickLinkActive={selectedTab === "moderating" && moderatingSubTab === "requests"}
+        onRequestsClick={handleRequestsQuickLinkClick}
+        pendingJoinRequestsCount={pendingJoinRequestsCount}
       />
 
       {/* Page header */}

@@ -7,6 +7,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/browser"
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton"
+import { templatePageTitle } from "@/lib/template-page-title"
 
 interface FormErrors {
   email?: string
@@ -210,7 +211,7 @@ export default function LoginForm({ enableGoogleAuth }: { enableGoogleAuth: bool
 
   return (
     <>
-      <title>Login | My JV Manager</title>
+      <title>{templatePageTitle("Login")}</title>
 
       <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-slate-50">
         <div className="w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white p-6 md:p-8 shadow-lg">

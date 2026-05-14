@@ -322,16 +322,18 @@ export default function GroupDetailPage() {
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set())
 
   const [group, setGroup] = useState<{
+    id?: string
     name: string
     description: string | null
     visibility: string
+    invite_code: string | null
     created_by: string
     allow_member_posts: boolean | null
     require_post_approval: boolean | null
     allow_member_events: boolean | null
     allow_member_invites: boolean | null
     avatar_url: string | null // Added avatar_url to group state
-    header_url: string | null // Added header_url to group state
+    header_image_url: string | null
     updated_at: string | null // Added updated_at for cache-busting
   } | null>(null)
   const [groupLoading, setGroupLoading] = useState(true)
@@ -349,6 +351,7 @@ export default function GroupDetailPage() {
   } | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [isGroupOwner, setIsGroupOwner] = useState(false)
+  const [isPlatformStaff, setIsPlatformStaff] = useState(false)
   const [showAddEventModal, setShowAddEventModal] = useState(false)
   const [eventForm, setEventForm] = useState({
     name: "", // This will be used for the Event Name field when creating an event.
@@ -467,6 +470,7 @@ export default function GroupDetailPage() {
     name: "",
     description: "",
     visibility: "public",
+    inviteCode: "",
     allowMemberPosts: true,
     requirePostApproval: false,
     allowMemberEvents: true,
@@ -545,7 +549,7 @@ export default function GroupDetailPage() {
       const { data, error } = await supabase
         .from("groups")
         .select(
-          "name, description, visibility, created_by, allow_member_posts, require_post_approval, allow_member_events, allow_member_invites, avatar_url, header_image_url, updated_at",
+          "id, name, description, visibility, invite_code, created_by, allow_member_posts, require_post_approval, allow_member_events, allow_member_invites, avatar_url, header_image_url, updated_at",
         )
         .eq("id", groupId)
         .single()
@@ -557,6 +561,7 @@ export default function GroupDetailPage() {
           name: data.name || "",
           description: data.description || "",
           visibility: data.visibility || "public",
+          inviteCode: data.invite_code || "",
           allowMemberPosts: data.allow_member_posts ?? true,
           requirePostApproval: data.require_post_approval ?? false,
           allowMemberEvents: data.allow_member_events ?? true,
@@ -671,9 +676,17 @@ export default function GroupDetailPage() {
         .select("role")
         .eq("group_id", groupId)
         .eq("user_id", currentUser.id)
-        .single()
+        .maybeSingle()
 
       setUserRole(membership?.role || null)
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_creator")
+        .eq("id", currentUser.id)
+        .maybeSingle()
+
+      setIsPlatformStaff(profile?.is_creator === true)
     }
     fetchUserRole()
   }, [currentUser, group, groupId, supabase])
@@ -849,7 +862,13 @@ export default function GroupDetailPage() {
 
   const isOwner = !!(group && currentUser && group.created_by === currentUser.id)
   const isAdmin = userRole === "admin"
-  const canSendGroupMessage = isGroupOwner || isAdmin
+  const canSendGroupMessage =
+    isGroupOwner ||
+    isOwner ||
+    isAdmin ||
+    userRole === "moderator" ||
+    userRole === "owner" ||
+    isPlatformStaff
 
   // Helper to check if user can delete a post
   const canDeletePost = (post: FeedPost) => {
@@ -883,6 +902,9 @@ export default function GroupDetailPage() {
       if (result.success) {
         setGroupMessageBody("")
         setGroupMessageModalOpen(false)
+        if (typeof result.recipientCount === "number") {
+          window.alert(`Message sent to ${result.recipientCount} group member${result.recipientCount === 1 ? "" : "s"}.`)
+        }
       } else {
         alert(result.error || "Failed to send message")
       }
@@ -3947,8 +3969,27 @@ export default function GroupDetailPage() {
                     >
                       <option value="public">Public</option>
                       <option value="request">Request</option>
+                      <option value="private">Private</option>
                     </select>
                   </div>
+
+                  {editGroupForm.visibility === "private" && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Invite code</label>
+                      <input
+                        type="text"
+                        name="inviteCode"
+                        value={editGroupForm.inviteCode}
+                        onChange={(e) => setEditGroupForm({ ...editGroupForm, inviteCode: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="Members use this code to join"
+                        autoComplete="off"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Leave blank to keep the current code. Enter a new code to change it.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3964,11 +4005,23 @@ export default function GroupDetailPage() {
                   type="button"
                   onClick={async () => {
                     try {
+                      if (
+                        editGroupForm.visibility === "private" &&
+                        !editGroupForm.inviteCode.trim() &&
+                        !(group?.invite_code ?? "").toString().trim()
+                      ) {
+                        alert("Invite code is required when making a group private.")
+                        return
+                      }
                       await updateGroup({
                         groupId: groupId as string,
                         name: editGroupForm.name,
                         description: editGroupForm.description,
                         visibility: editGroupForm.visibility as "public" | "request" | "private",
+                        invite_code:
+                          editGroupForm.visibility === "private"
+                            ? editGroupForm.inviteCode.trim() || undefined
+                            : undefined,
                         allow_member_posts: editGroupForm.allowMemberPosts,
                         require_post_approval: editGroupForm.requirePostApproval,
                         allow_member_events: editGroupForm.allowMemberEvents,
@@ -3979,12 +4032,22 @@ export default function GroupDetailPage() {
                       const { data } = await supabase
                         .from("groups")
                         .select(
-                          "name, description, visibility, created_by, allow_member_posts, require_post_approval, allow_member_events, allow_member_invites, header_image_url, updated_at",
+                          "id, name, description, visibility, invite_code, created_by, allow_member_posts, require_post_approval, allow_member_events, allow_member_invites, avatar_url, header_image_url, updated_at",
                         )
                         .eq("id", groupId)
                         .single()
                       if (data) {
                         setGroup(data)
+                        setEditGroupForm({
+                          name: data.name || "",
+                          description: data.description || "",
+                          visibility: data.visibility || "public",
+                          inviteCode: data.invite_code ?? "",
+                          allowMemberPosts: data.allow_member_posts ?? true,
+                          requirePostApproval: data.require_post_approval ?? false,
+                          allowMemberEvents: data.allow_member_events ?? true,
+                          allowMemberInvites: data.allow_member_invites ?? true,
+                        })
                       }
                       setShowEditGroupModal(false)
                     } catch (error) {

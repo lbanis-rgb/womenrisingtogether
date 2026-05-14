@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { MoreHorizontal, Star } from "lucide-react"
+import { toast } from "sonner"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -193,14 +194,7 @@ export default function CourseTable({ courses }: CourseTableProps) {
                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                     )}
                   </span>
-                  <a
-                    href={`/members/courses/${course.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium hover:underline"
-                  >
-                    {course.title}
-                  </a>
+                  <span className="font-medium">{course.title}</span>
                 </div>
                 {course.description && (
                   <div className="text-xs text-muted-foreground line-clamp-2 max-w-[280px]">
@@ -236,29 +230,32 @@ export default function CourseTable({ courses }: CourseTableProps) {
                   </DropdownMenuTrigger>
 
                   <DropdownMenuContent align="end">
-
-                    <DropdownMenuItem asChild>
-                      <a
-                        href={`/members/courses/${course.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View Course
-                      </a>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-
                     {course.status === "pending" && (
-                      <DropdownMenuItem onClick={() => approveCourse(course.id)}>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const res = await approveCourse(course.id)
+                          if (!res.success) {
+                            console.error("[CourseTable] approveCourse", res.error)
+                            toast.error(res.error)
+                            return
+                          }
+                          router.refresh()
+                        }}
+                      >
                         Approve Course
                       </DropdownMenuItem>
                     )}
 
                     <DropdownMenuItem
-                      onClick={() =>
-                        toggleFeaturedCourse(course.id, course.featured || false)
-                      }
+                      onClick={async () => {
+                        const res = await toggleFeaturedCourse(course.id, course.featured || false)
+                        if (!res.success) {
+                          console.error("[CourseTable] toggleFeaturedCourse", res.error)
+                          toast.error(res.error)
+                          return
+                        }
+                        router.refresh()
+                      }}
                     >
                       Toggle Featured
                     </DropdownMenuItem>
@@ -266,7 +263,12 @@ export default function CourseTable({ courses }: CourseTableProps) {
                     {course.is_sponsored ? (
                       <DropdownMenuItem
                         onClick={async () => {
-                          await unsponsorCourse(course.id)
+                          const res = await unsponsorCourse(course.id)
+                          if (!res.success) {
+                            console.error("[CourseTable] unsponsorCourse", res.error)
+                            toast.error(res.error)
+                            return
+                          }
                           router.refresh()
                         }}
                       >
@@ -275,7 +277,12 @@ export default function CourseTable({ courses }: CourseTableProps) {
                     ) : (
                       <DropdownMenuItem
                         onClick={async () => {
-                          await sponsorCourse(course.id)
+                          const res = await sponsorCourse(course.id)
+                          if (!res.success) {
+                            console.error("[CourseTable] sponsorCourse", res.error)
+                            toast.error(res.error)
+                            return
+                          }
                           router.refresh()
                         }}
                       >
@@ -284,13 +291,33 @@ export default function CourseTable({ courses }: CourseTableProps) {
                     )}
 
                     {course.status === "approved" && (
-                      <DropdownMenuItem onClick={() => retireCourse(course.id)}>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const res = await retireCourse(course.id)
+                          if (!res.success) {
+                            console.error("[CourseTable] retireCourse", res.error)
+                            toast.error(res.error)
+                            return
+                          }
+                          router.refresh()
+                        }}
+                      >
                         Retire Course
                       </DropdownMenuItem>
                     )}
 
                     {course.status === "retired" && (
-                      <DropdownMenuItem onClick={() => restoreCourse(course.id)}>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const res = await restoreCourse(course.id)
+                          if (!res.success) {
+                            console.error("[CourseTable] restoreCourse", res.error)
+                            toast.error(res.error)
+                            return
+                          }
+                          router.refresh()
+                        }}
+                      >
                         Restore Course
                       </DropdownMenuItem>
                     )}
@@ -328,7 +355,15 @@ export default function CourseTable({ courses }: CourseTableProps) {
 
                     <DropdownMenuItem
                       className="text-red-600"
-                      onClick={() => deleteCourse(course.id)}
+                      onClick={async () => {
+                        const res = await deleteCourse(course.id)
+                        if (!res.success) {
+                          console.error("[CourseTable] deleteCourse", res.error)
+                          toast.error(res.error)
+                          return
+                        }
+                        router.refresh()
+                      }}
                     >
                       Delete Course
                     </DropdownMenuItem>
@@ -442,10 +477,16 @@ export default function CourseTable({ courses }: CourseTableProps) {
             onClick={async () => {
               if (!accessCourse) return
 
-              await updateCourseAccessType(
+              const res = await updateCourseAccessType(
                 accessCourse.id,
                 accessType as "free" | "paid" | "plan"
               )
+
+              if (!res.success) {
+                console.error("[CourseTable] updateCourseAccessType", res.error)
+                toast.error(res.error)
+                return
+              }
 
               router.refresh()
               setAccessCourse(null)
@@ -462,6 +503,8 @@ export default function CourseTable({ courses }: CourseTableProps) {
   )
 }
 
+const ADMIN_STATUS_OPTIONS = ["draft", "pending", "approved", "retired"] as const
+
 function StatusModalContent({
   course,
   onClose,
@@ -471,19 +514,30 @@ function StatusModalContent({
   onClose: () => void
   onSuccess: () => void
 }) {
-  const baseStatuses = ["draft", "pending", "approved", "retired", "rejected"] as const
-  const current = course.status?.trim() || ""
-  const STATUS_OPTIONS =
-    current && !baseStatuses.includes(current as (typeof baseStatuses)[number])
-      ? [...baseStatuses, current]
-      : [...baseStatuses]
+  const current = (course.status?.trim().toLowerCase() || "") as string
+  const initialStatus = ADMIN_STATUS_OPTIONS.includes(current as (typeof ADMIN_STATUS_OPTIONS)[number])
+    ? current
+    : "draft"
 
-  const [selectedStatus, setSelectedStatus] = useState(current || "draft")
+  const [selectedStatus, setSelectedStatus] = useState(initialStatus)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    const next = (course.status?.trim().toLowerCase() || "") as string
+    setSelectedStatus(
+      ADMIN_STATUS_OPTIONS.includes(next as (typeof ADMIN_STATUS_OPTIONS)[number]) ? next : "draft"
+    )
+  }, [course.id, course.status])
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    await updateCourseStatus(course.id, selectedStatus)
+    const res = await updateCourseStatus(course.id, selectedStatus)
+    if (!res.success) {
+      console.error("[CourseTable] updateCourseStatus", res.error)
+      toast.error(res.error)
+      setIsSubmitting(false)
+      return
+    }
     onSuccess()
     setIsSubmitting(false)
   }
@@ -497,7 +551,7 @@ function StatusModalContent({
           onChange={(e) => setSelectedStatus(e.target.value)}
           className="w-full px-3 py-2 border rounded-md"
         >
-          {STATUS_OPTIONS.map((opt) => (
+          {ADMIN_STATUS_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>
               {opt}
             </option>
@@ -538,8 +592,16 @@ function PlansModalContent({
         getCourseAccessPlanIds(course.id),
       ])
       if (!mounted) return
-      if (plansRes.success) setPlans(plansRes.plans)
-      if (accessRes.success) {
+      if (!plansRes.success) {
+        console.error("[CourseTable] getActivePlans", plansRes.error)
+        toast.error(plansRes.error)
+      } else {
+        setPlans(plansRes.plans)
+      }
+      if (!accessRes.success) {
+        console.error("[CourseTable] getCourseAccessPlanIds", accessRes.error)
+        toast.error(accessRes.error)
+      } else {
         setSelectedPlanIds(new Set(accessRes.planIds))
       }
       setIsLoading(false)
@@ -559,7 +621,13 @@ function PlansModalContent({
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    await updateCoursePlans(course.id, Array.from(selectedPlanIds))
+    const res = await updateCoursePlans(course.id, Array.from(selectedPlanIds))
+    if (!res.success) {
+      console.error("[CourseTable] updateCoursePlans", res.error)
+      toast.error(res.error)
+      setIsSubmitting(false)
+      return
+    }
     onSuccess()
     setIsSubmitting(false)
   }
@@ -630,12 +698,18 @@ function StripeModalContent({
   const handleSubmit = async () => {
     setIsSubmitting(true)
     const priceNum = price.trim() ? parseFloat(price) : null
-    await updateCourseStripeDetails(
+    const res = await updateCourseStripeDetails(
       course.id,
       priceNum,
       stripePriceId.trim() || null,
       paymentUrl.trim() || null
     )
+    if (!res.success) {
+      console.error("[CourseTable] updateCourseStripeDetails", res.error)
+      toast.error(res.error)
+      setIsSubmitting(false)
+      return
+    }
     onSuccess()
     setIsSubmitting(false)
   }

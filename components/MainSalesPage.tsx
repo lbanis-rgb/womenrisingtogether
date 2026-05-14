@@ -101,6 +101,72 @@ export function MainSalesPage({
     salesPage?.membership_intro?.trim() ??
     "Everyone can join for free and immediately experience the community.\nAs your goals grow, upgrade to unlock tools that help you build your business and amplify your message."
 
+  const planDescription = (plan: ActivePlanForSalesPage) =>
+    (plan as { description?: string }).description
+
+  const renderVerticalMembershipPlanCard = (plan: ActivePlanForSalesPage) => {
+    const isPopular = plan.most_popular === true
+    const currencySymbol =
+      plan.currency === "USD" || plan.currency == null || plan.currency === ""
+        ? "$"
+        : plan.currency
+    const priceDisplay =
+      plan.price == null || plan.price === 0
+        ? ""
+        : `${currencySymbol}${plan.price}${plan.billing ? ` / ${plan.billing}` : ""}`
+    const showPrice = plan.price != null && plan.price !== 0
+    const features = Array.isArray(plan.features)
+      ? plan.features.filter((f): f is string => typeof f === "string" && f.trim() !== "")
+      : []
+    const ctaHref = plan.payment_url?.trim() || "#"
+    const desc = planDescription(plan)
+
+    return (
+      <div
+        className={
+          isPopular
+            ? "bg-gradient-to-br from-purple-100 to-brand-50 rounded-2xl shadow-2xl p-8 border-2 border-purple-300 relative h-full min-w-0"
+            : "bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl p-8 border border-blue-200 h-full min-w-0"
+        }
+      >
+        {isPopular && (
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+            <span className="bg-gradient-to-r from-purple-600 to-brand-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+              Most Popular
+            </span>
+          </div>
+        )}
+        <div className={`text-center mb-6 ${isPopular ? "pt-2" : ""}`}>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+          {showPrice && <p className="text-3xl font-bold text-gray-900">{priceDisplay}</p>}
+          {desc && desc.trim() !== "" && (
+            <p className="text-sm text-gray-600 mt-2 mb-4 text-center">{desc}</p>
+          )}
+        </div>
+        <ul className="space-y-2 mb-8">
+          {features.map((f, i) => (
+            <li key={i} className="flex items-start space-x-3">
+              <i className={`fa-solid fa-check mt-1 ${isPopular ? "text-purple-600" : "text-blue-500"}`} />
+              <span className="text-sm text-gray-700">{f}</span>
+            </li>
+          ))}
+        </ul>
+        <a
+          href={ctaHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={
+            isPopular
+              ? "block w-full text-center px-8 py-4 bg-gradient-to-r from-purple-600 to-brand-600 text-white rounded-full hover:from-purple-700 hover:to-brand-700 transition-all duration-200 font-semibold shadow-lg"
+              : "block w-full text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
+          }
+        >
+          {plan.price == null || plan.price === 0 ? "Get Started" : `Choose ${plan.name}`}
+        </a>
+      </div>
+    )
+  }
+
   return (
     <div className="font-sans bg-white">
       {/* Header with Login */}
@@ -896,204 +962,111 @@ export function MainSalesPage({
               {membershipIntro}
             </p>
           </div>
-          {orderedPlans.length >= 4 ? (
-            <>
-              {/* First Plan – Compact horizontal banner card */}
-              <div className="max-w-6xl mx-auto mb-12">
-                <div className="w-full">
-                  {(() => {
-                    const plan = orderedPlans[0]
-                    const features = Array.isArray(plan.features)
-                      ? plan.features.filter((f): f is string => typeof f === "string" && f.trim() !== "")
-                      : []
-                    const firstPlanFeatures = features.slice(0, 6)
-                    const ctaHref = plan.payment_url?.trim() || "#"
-                    return (
-                      <div
-                        key={plan.id}
-                        className="bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl border border-blue-200 p-6"
-                      >
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
-                          {/* Left: Plan name + description (centered) */}
-                          <div className="md:w-1/4 text-center md:text-center">
-                            <h3 className="text-2xl font-bold text-gray-900">
-                              {plan.name}
-                            </h3>
-                            {(plan as { description?: string }).description &&
-                              (plan as { description?: string }).description!.trim() !== "" && (
-                                <p className="text-sm text-gray-600 mt-2">
-                                  {(plan as { description?: string }).description}
-                                </p>
-                              )}
-                          </div>
-                          {/* Middle: Features in 2 columns */}
-                          <div className="md:w-2/4 min-w-0">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-                              {firstPlanFeatures.map((f, i) => (
-                                <div key={i} className="flex items-start space-x-3">
-                                  <i className="fa-solid fa-check mt-1 text-blue-500 flex-shrink-0" />
-                                  <span className="text-sm text-gray-700">{f}</span>
+          {(() => {
+            const pc = orderedPlans.length
+            if (pc === 0) return null
+
+            if (pc === 4) {
+              return (
+                <>
+                  <div className="max-w-7xl mx-auto mb-12 w-full">
+                    <div className="w-full min-w-0">
+                      {(() => {
+                        const plan = orderedPlans[0]
+                        const features = Array.isArray(plan.features)
+                          ? plan.features.filter((f): f is string => typeof f === "string" && f.trim() !== "")
+                          : []
+                        const firstPlanFeatures = features.slice(0, 6)
+                        const ctaHref = plan.payment_url?.trim() || "#"
+                        const desc = planDescription(plan)
+                        return (
+                          <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl border border-blue-200 p-6">
+                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
+                              <div className="md:w-1/4 text-center md:text-center">
+                                <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
+                                {desc && desc.trim() !== "" && (
+                                  <p className="text-sm text-gray-600 mt-2">{desc}</p>
+                                )}
+                              </div>
+                              <div className="md:w-2/4 min-w-0">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                                  {firstPlanFeatures.map((f, i) => (
+                                    <div key={i} className="flex items-start space-x-3">
+                                      <i className="fa-solid fa-check mt-1 text-blue-500 flex-shrink-0" />
+                                      <span className="text-sm text-gray-700">{f}</span>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
+                              </div>
+                              <div className="md:w-1/4 md:text-right">
+                                <a
+                                  href={ctaHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block w-full md:w-auto md:inline-block text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
+                                >
+                                  {plan.price == null || plan.price === 0 ? "Get Started" : `Choose ${plan.name}`}
+                                </a>
+                              </div>
                             </div>
                           </div>
-                          {/* Right: CTA */}
-                          <div className="md:w-1/4 md:text-right">
-                            <a
-                              href={ctaHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block w-full md:w-auto md:inline-block text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
-                            >
-                              {plan.price == null || plan.price === 0 ? "Get Started" : `Choose ${plan.name}`}
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })()}
-                </div>
-              </div>
-              {/* Remaining Plans – 3 Column Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                {orderedPlans.slice(1).map((plan) => {
-                  const isPopular = plan.most_popular === true
-                  const currencySymbol =
-                    plan.currency === "USD" || plan.currency == null || plan.currency === ""
-                      ? "$"
-                      : plan.currency
-                  const priceDisplay =
-                    plan.price == null || plan.price === 0
-                      ? ""
-                      : `${currencySymbol}${plan.price}${plan.billing ? ` / ${plan.billing}` : ""}`
-                  const showPrice = plan.price != null && plan.price !== 0
-                  const features = Array.isArray(plan.features)
-                    ? plan.features.filter((f): f is string => typeof f === "string" && f.trim() !== "")
-                    : []
-                  const ctaHref = plan.payment_url?.trim() || "#"
-                  return (
-                    <div
-                      key={plan.id}
-                      className={
-                        isPopular
-                          ? "bg-gradient-to-br from-purple-100 to-brand-50 rounded-2xl shadow-2xl p-8 border-2 border-purple-300 relative"
-                          : "bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl p-8 border border-blue-200"
-                      }
-                    >
-                      {isPopular && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-gradient-to-r from-purple-600 to-brand-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                            Most Popular
-                          </span>
-                        </div>
-                      )}
-                      <div className={`text-center mb-6 ${isPopular ? "pt-2" : ""}`}>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                        {showPrice && <p className="text-3xl font-bold text-gray-900">{priceDisplay}</p>}
-                        {(plan as { description?: string }).description &&
-                          (plan as { description?: string }).description!.trim() !== "" && (
-                            <p className="text-sm text-gray-600 mt-2 mb-4 text-center">
-                              {(plan as { description?: string }).description}
-                            </p>
-                          )}
-                      </div>
-                      <ul className="space-y-2 mb-8">
-                        {features.map((f, i) => (
-                          <li key={i} className="flex items-start space-x-3">
-                            <i
-                              className={`fa-solid fa-check mt-1 ${isPopular ? "text-purple-600" : "text-blue-500"}`}
-                            />
-                            <span className="text-sm text-gray-700">{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <a
-                        href={ctaHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={
-                          isPopular
-                            ? "block w-full text-center px-8 py-4 bg-gradient-to-r from-purple-600 to-brand-600 text-white rounded-full hover:from-purple-700 hover:to-brand-700 transition-all duration-200 font-semibold shadow-lg"
-                            : "block w-full text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
-                        }
-                      >
-                        {plan.price == null || plan.price === 0 ? "Get Started" : `Choose ${plan.name}`}
-                      </a>
+                        )
+                      })()}
                     </div>
-                  )
-                })}
-              </div>
-            </>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {orderedPlans.map((plan) => {
-                const isPopular = plan.most_popular === true
-                const currencySymbol =
-                  plan.currency === "USD" || plan.currency == null || plan.currency === ""
-                    ? "$"
-                    : plan.currency
-                const priceDisplay =
-                  plan.price == null || plan.price === 0
-                    ? ""
-                    : `${currencySymbol}${plan.price}${plan.billing ? ` / ${plan.billing}` : ""}`
-                const showPrice = plan.price != null && plan.price !== 0
-                const features = Array.isArray(plan.features)
-                  ? plan.features.filter((f): f is string => typeof f === "string" && f.trim() !== "")
-                  : []
-                const ctaHref = plan.payment_url?.trim() || "#"
-                return (
-                  <div
-                    key={plan.id}
-                    className={
-                      isPopular
-                        ? "bg-gradient-to-br from-purple-100 to-brand-50 rounded-2xl shadow-2xl p-8 border-2 border-purple-300 relative"
-                        : "bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl p-8 border border-blue-200"
-                    }
-                  >
-                    {isPopular && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <span className="bg-gradient-to-r from-purple-600 to-brand-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                          Most Popular
-                        </span>
-                      </div>
-                    )}
-                    <div className={`text-center mb-6 ${isPopular ? "pt-2" : ""}`}>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                      {showPrice && <p className="text-3xl font-bold text-gray-900">{priceDisplay}</p>}
-                      {(plan as { description?: string }).description &&
-                        (plan as { description?: string }).description!.trim() !== "" && (
-                          <p className="text-sm text-gray-600 mt-2 mb-4 text-center">
-                            {(plan as { description?: string }).description}
-                          </p>
-                        )}
-                    </div>
-                    <ul className="space-y-2 mb-8">
-                      {features.map((f, i) => (
-                        <li key={i} className="flex items-start space-x-3">
-                          <i
-                            className={`fa-solid fa-check mt-1 ${isPopular ? "text-purple-600" : "text-blue-500"}`}
-                          />
-                          <span className="text-sm text-gray-700">{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <a
-                      href={ctaHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={
-                        isPopular
-                          ? "block w-full text-center px-8 py-4 bg-gradient-to-r from-purple-600 to-brand-600 text-white rounded-full hover:from-purple-700 hover:to-brand-700 transition-all duration-200 font-semibold shadow-lg"
-                          : "block w-full text-center px-8 py-4 bg-white text-brand-600 rounded-full border-2 border-brand-600 hover:bg-brand-50 transition-all duration-200 font-semibold"
-                      }
-                    >
-                      {plan.price == null || plan.price === 0 ? "Get Started" : `Choose ${plan.name}`}
-                    </a>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
+                    {orderedPlans.slice(1).map((plan) => (
+                      <div key={plan.id} className="min-w-0">
+                        {renderVerticalMembershipPlanCard(plan)}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )
+            }
+
+            if (pc === 3) {
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
+                  {orderedPlans.map((plan) => (
+                    <div key={plan.id} className="min-w-0">
+                      {renderVerticalMembershipPlanCard(plan)}
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+
+            if (pc === 2) {
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
+                  {orderedPlans.map((plan) => (
+                    <div key={plan.id} className="min-w-0">
+                      {renderVerticalMembershipPlanCard(plan)}
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+
+            if (pc === 1) {
+              return (
+                <div className="max-w-md mx-auto w-full min-w-0">
+                  {renderVerticalMembershipPlanCard(orderedPlans[0])}
+                </div>
+              )
+            }
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
+                {orderedPlans.map((plan) => (
+                  <div key={plan.id} className="min-w-0">
+                    {renderVerticalMembershipPlanCard(plan)}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       </section>
 

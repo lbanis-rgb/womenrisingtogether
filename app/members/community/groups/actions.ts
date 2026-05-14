@@ -8,7 +8,11 @@ export type GroupForListing = {
   slug: string // Added slug field
   description: string | null
   listingImageUrl: string | null
-  joinPolicy: "open" | "request"
+  /** DB visibility; preferred source for edit UI */
+  visibility?: "public" | "request" | "private"
+  joinPolicy: "open" | "request" | "private"
+  /** Present when the listing query includes it (e.g. member groups) */
+  inviteCode?: string | null
   role: "member" | "moderator" | "owner" | "admin" | "none"
   status: string | null
   deleted_at: string | null
@@ -16,6 +20,12 @@ export type GroupForListing = {
   categoryIds: string[]
   createdByName: string | null
   createdByAvatarUrl: string | null
+}
+
+function visibilityToJoinPolicy(visibility: string | null | undefined): "open" | "request" | "private" {
+  if (visibility === "request") return "request"
+  if (visibility === "private") return "private"
+  return "open"
 }
 
 export async function getUserGroupsForListing(): Promise<GroupForListing[]> {
@@ -35,6 +45,7 @@ export async function getUserGroupsForListing(): Promise<GroupForListing[]> {
       description,
       listing_image_url,
       visibility,
+      invite_code,
       status,
       deleted_at,
       created_by,
@@ -55,6 +66,7 @@ export async function getUserGroupsForListing(): Promise<GroupForListing[]> {
       description: string | null
       listing_image_url: string | null
       visibility: string
+      invite_code: string | null
       status: string | null
       deleted_at: string | null
       profiles?: { full_name: string | null; avatar_url: string | null } | null
@@ -73,6 +85,7 @@ export async function getUserGroupsForListing(): Promise<GroupForListing[]> {
           description,
           listing_image_url,
           visibility,
+          invite_code,
           status,
           deleted_at,
           created_by,
@@ -98,14 +111,17 @@ export async function getUserGroupsForListing(): Promise<GroupForListing[]> {
     if (!g || seenIds.has(g.id)) continue
     seenIds.add(g.id)
 
+    const vis = (g.visibility || "public") as "public" | "request" | "private"
     result.push({
       id: g.id,
       name: g.name,
       slug: g.slug, // Added slug
       description: g.description,
       listingImageUrl: g.listing_image_url,
-      joinPolicy: g.visibility === "request" ? "request" : "open",
-      role: membership.role as "member" | "moderator" | "owner",
+      visibility: vis,
+      joinPolicy: visibilityToJoinPolicy(g.visibility),
+      inviteCode: g.invite_code ?? null,
+      role: membership.role as GroupForListing["role"],
       status: g.status,
       deleted_at: g.deleted_at,
       memberCount: 0,
@@ -121,13 +137,16 @@ export async function getUserGroupsForListing(): Promise<GroupForListing[]> {
       if (seenIds.has(g.id)) continue
       seenIds.add(g.id)
 
+      const vis = (g.visibility || "public") as "public" | "request" | "private"
       result.push({
         id: g.id,
         name: g.name,
         slug: g.slug, // Added slug
         description: g.description,
         listingImageUrl: g.listing_image_url,
-        joinPolicy: g.visibility === "request" ? "request" : "open",
+        visibility: vis,
+        joinPolicy: visibilityToJoinPolicy(g.visibility),
+        inviteCode: g.invite_code ?? null,
         role: "none",
         status: g.status,
         deleted_at: g.deleted_at,
@@ -187,7 +206,7 @@ export async function getUserGroupsForListing(): Promise<GroupForListing[]> {
 export type CreateGroupInput = {
   name: string
   slug: string
-  visibility: "public" | "request" | "private"
+  visibility?: "public" | "request" | "private"
   description?: string
   allow_member_posts?: boolean
   require_post_approval?: boolean
@@ -197,7 +216,7 @@ export type CreateGroupInput = {
   listing_image_url?: string
   header_image_url?: string
   avatar_url?: string
-  invite_code?: string
+  invite_code?: string | null
 }
 
 export async function createGroup(
@@ -221,13 +240,15 @@ export async function createGroup(
       return { success: false, error: "A group with this slug already exists" }
     }
 
+    const visibility = input.visibility ?? "public"
+
     const { data: newGroup, error: insertError } = await supabase
       .from("groups")
       .insert({
         name: input.name,
         slug: input.slug,
         description: input.description || null,
-        visibility: input.visibility,
+        visibility,
         created_by: user.id,
         allow_member_posts: input.allow_member_posts ?? true,
         require_post_approval: input.require_post_approval ?? false,
@@ -238,7 +259,7 @@ export async function createGroup(
         avatar_url: input.avatar_url || null,
         status: "active", // Add status field
         deleted_at: null, // Add deleted_at field
-        invite_code: input.invite_code ?? null,
+        invite_code: visibility === "private" ? (input.invite_code?.trim() || null) : null,
       })
       .select("id")
       .single()
@@ -330,17 +351,37 @@ export async function updateGroup(
       return { success: false, error: "A group with this slug already exists" }
     }
 
+    const { data: existingRow, error: existingError } = await supabase
+      .from("groups")
+      .select("visibility, invite_code")
+      .eq("id", groupId)
+      .single()
+
+    if (existingError || !existingRow) {
+      console.error("[updateGroup] Failed to load existing group:", existingError)
+      return { success: false, error: existingError?.message || "Group not found" }
+    }
+
+    const mergedVisibility =
+      (input.visibility ?? (existingRow.visibility as CreateGroupInput["visibility"])) || "public"
+
+    let mergedInviteCode: string | null = null
+    if (mergedVisibility === "private") {
+      const trimmed = input.invite_code?.trim()
+      mergedInviteCode = trimmed || existingRow.invite_code || null
+    }
+
     const { error: updateError } = await supabase
       .from("groups")
       .update({
         name: input.name,
         slug: input.slug,
         description: input.description || null,
-        visibility: input.visibility,
+        visibility: mergedVisibility,
         listing_image_url: input.listing_image_url || null,
         header_image_url: input.header_image_url || null,
         avatar_url: input.avatar_url || null,
-        invite_code: input.invite_code ?? null,
+        invite_code: mergedInviteCode,
         updated_at: new Date().toISOString(),
       })
       .eq("id", groupId)

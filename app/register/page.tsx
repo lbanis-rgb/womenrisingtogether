@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { templatePageTitle } from "@/lib/template-page-title"
 
 interface FormErrors {
   firstName?: string
@@ -175,7 +176,7 @@ export default function RegisterPage() {
 
   return (
     <>
-      <title>Register | My JV Manager</title>
+      <title>{templatePageTitle("Register")}</title>
 
       <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[radial-gradient(ellipse_at_top_left,rgba(10,20,40,0.95),rgba(47,145,207,0.25))]">
         <div className="w-full max-w-[420px] rounded-2xl border border-[rgba(10,20,40,0.05)] bg-white/95 backdrop-blur p-6 md:p-8 shadow-xl">

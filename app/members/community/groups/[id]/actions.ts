@@ -32,11 +32,36 @@ async function getGroupPermissionFlags(supabase: any, groupId: string, userId: s
     .select("role")
     .eq("group_id", groupId)
     .eq("user_id", userId)
-    .single()
+    .maybeSingle()
 
   const isAdmin = membership?.role === "admin"
 
   return { isGroupOwner, isAdmin }
+}
+
+/** Who may post a broadcast row to messages (group_id set, conversation_id null). */
+async function userCanSendGroupBroadcast(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  groupId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data: groupRow } = await supabase.from("groups").select("created_by").eq("id", groupId).maybeSingle()
+  if (groupRow?.created_by === userId) return true
+
+  const { data: membership } = await supabase
+    .from("group_members")
+    .select("role")
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  const role = membership?.role
+  if (role === "admin" || role === "moderator" || role === "owner") return true
+
+  const { data: profile } = await supabase.from("profiles").select("is_creator").eq("id", userId).maybeSingle()
+  if (profile?.is_creator === true) return true
+
+  return false
 }
 
 export async function getGroupMediaCounts(groupId: string): Promise<{
@@ -695,13 +720,14 @@ export async function createGroupEvent(
     intention: intention?.trim() || null,
     image_url: imageUrl?.trim() || null,
     access_details: accessDetails?.trim() || null,
+    additional_info_link: additionalInfoLink?.trim() || null,
     status: status === "published" ? "published" : "draft",
   }
 
   const { data: eventData, error } = await supabase
     .from("group_events")
     .insert(payload)
-    .select("id, title, start_at, end_at, event_type, description")
+    .select("id, title, start_at, end_at, event_type, description, additional_info_link")
     .single()
 
   if (error) {
@@ -725,8 +751,11 @@ export async function createGroupEvent(
       status: "active",
     }
 
-    if (additionalInfoLink?.trim()) {
-      commentPayload.link_url = additionalInfoLink.trim()
+    const linkForPost =
+      (eventData as { additional_info_link?: string | null }).additional_info_link?.trim() ||
+      additionalInfoLink?.trim()
+    if (linkForPost) {
+      commentPayload.link_url = linkForPost
     }
 
     const { error: commentError } = await serviceSupabase.from("comments").insert(commentPayload)
@@ -834,6 +863,7 @@ export async function updateGroupEvent(
     intention: intention?.trim() || null,
     image_url: imageUrl?.trim() || null,
     access_details: accessDetails?.trim() || null,
+    additional_info_link: additionalInfoLink?.trim() || null,
   }
 
   if (status) {
@@ -845,7 +875,7 @@ export async function updateGroupEvent(
     .update(payload)
     .eq("id", eventId)
     .eq("group_id", groupId)
-    .select("id, title, start_at, end_at, event_type, description, status")
+    .select("id, title, start_at, end_at, event_type, description, status, additional_info_link")
     .single()
 
   if (error) {
@@ -869,8 +899,11 @@ export async function updateGroupEvent(
       status: "active",
     }
 
-    if (additionalInfoLink?.trim()) {
-      commentPayload.link_url = additionalInfoLink.trim()
+    const linkForPost =
+      (eventData as { additional_info_link?: string | null }).additional_info_link?.trim() ||
+      additionalInfoLink?.trim()
+    if (linkForPost) {
+      commentPayload.link_url = linkForPost
     }
 
     const { error: commentError } = await serviceSupabase.from("comments").insert(commentPayload)
@@ -1037,7 +1070,7 @@ function formatEventPostBody(event: {
 export async function sendGroupMessage(
   groupId: string,
   body: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true; recipientCount: number } | { success: false; error: string }> {
   const supabase = await createClient()
 
   const {
@@ -1052,42 +1085,43 @@ export async function sendGroupMessage(
     return { success: false, error: "Message body is required" }
   }
 
-  // Check permissions (Owner or Admin)
-  const { isGroupOwner, isAdmin } = await getGroupPermissionFlags(supabase, groupId, user.id)
-
-  if (!isGroupOwner && !isAdmin) {
-    return { success: false, error: "Only group owners and admins can send group messages" }
+  const allowed = await userCanSendGroupBroadcast(supabase, groupId, user.id)
+  if (!allowed) {
+    return {
+      success: false,
+      error: "Only group owners, moderators, admins, or platform staff can send group messages",
+    }
   }
 
-  const { error } = await supabase.from("messages").insert({
+  const serviceSupabase = createServiceRoleClient()
+
+  const { data: memberRows } = await serviceSupabase
+    .from("group_members")
+    .select("user_id")
+    .eq("group_id", groupId)
+
+  const recipientCount = (memberRows ?? []).filter((m) => m.user_id !== user.id).length
+
+  const { error: insertError } = await serviceSupabase.from("messages").insert({
     group_id: groupId,
     conversation_id: null,
     sender_id: user.id,
     body: body.trim(),
   })
 
-  if (error) {
-    console.error("Error sending group message:", error)
-    return { success: false, error: error.message }
+  if (insertError) {
+    console.error("sendGroupMessage insert failed:", insertError)
+    return { success: false, error: insertError.message }
   }
 
   // Email notifications for group members
-  const { data: members } = await supabase
-    .from("group_members")
-    .select("user_id")
-    .eq("group_id", groupId)
-
-  if (members && members.length > 0) {
-    const { data: group } = await supabase
-      .from("groups")
-      .select("name")
-      .eq("id", groupId)
-      .single()
+  const members = memberRows ?? []
+  if (members.length > 0) {
+    const { data: group } = await serviceSupabase.from("groups").select("name").eq("id", groupId).single()
 
     const groupName = group?.name ?? null
 
-    // Get sender name
-    const { data: senderProfile } = await supabase
+    const { data: senderProfile } = await serviceSupabase
       .from("profiles")
       .select("full_name")
       .eq("id", user.id)
@@ -1099,7 +1133,7 @@ export async function sendGroupMessage(
       members
         .filter((m) => m.user_id !== user.id)
         .map(async (member) => {
-          const { data: recipientProfile } = await supabase
+          const { data: recipientProfile } = await serviceSupabase
             .from("profiles")
             .select("inbox_emails_enabled")
             .eq("id", member.user_id)
@@ -1107,22 +1141,19 @@ export async function sendGroupMessage(
 
           if (recipientProfile?.inbox_emails_enabled === true) {
             try {
-              await fetch(
-                `${process.env.SUPABASE_FUNCTIONS_URL}/notify-inbox`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-                    "x-function-secret": process.env.FUNCTION_SECRET!,
-                  },
-                  body: JSON.stringify({
-                    recipient_user_id: member.user_id,
-                    sender_name: senderName,
-                    group_name: groupName,
-                  }),
+              await fetch(`${process.env.SUPABASE_FUNCTIONS_URL}/notify-inbox`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                  "x-function-secret": process.env.FUNCTION_SECRET!,
                 },
-              )
+                body: JSON.stringify({
+                  recipient_user_id: member.user_id,
+                  sender_name: senderName,
+                  group_name: groupName,
+                }),
+              })
             } catch {
               // Email is non-critical — do not block message send
             }
@@ -1134,41 +1165,7 @@ export async function sendGroupMessage(
   revalidatePath("/members/inbox")
   revalidatePath(`/members/community/groups/${groupId}`)
 
-  return { success: true }
-}
-
-/**
- * Get all group messages for current user
- */
-export async function getGroupMessages() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) throw new Error("Unauthorized")
-
-  const { data, error } = await supabase
-    .from("messages")
-    .select(`
-      id,
-      body,
-      created_at,
-      group_id,
-      groups (
-        name
-      )
-    `)
-    .not("group_id", "is", null)
-    .order("created_at", { ascending: false })
-
-  if (error) {
-    console.error("Error fetching group messages:", error)
-    return []
-  }
-
-  return data ?? []
+  return { success: true, recipientCount }
 }
 
 export async function pinGroupPost(

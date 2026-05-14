@@ -149,8 +149,6 @@ export default function DirectoryPage() {
         country: countryFilter,
       })
 
-      console.log("DIRECTORY DEBUG:", res)
-
       if (!active) return
 
       if (res.error) {
@@ -164,7 +162,7 @@ export default function DirectoryPage() {
       setMembers(res.members)
       setTotalCount(res.totalCount)
       setPage(1)
-      setHasMore(res.members.length === 20)
+      setHasMore((res.totalCount ?? 0) > res.members.length)
       setLoading(false)
     }
 
@@ -334,9 +332,12 @@ export default function DirectoryPage() {
                     })
 
                     if (!res.error) {
-                      setMembers((prev) => [...prev, ...res.members])
+                      setMembers((prev) => {
+                        const merged = [...prev, ...res.members]
+                        setHasMore(merged.length < (res.totalCount ?? 0))
+                        return merged
+                      })
                       setPage(nextPage)
-                      setHasMore(res.members.length === 20)
                     }
 
                     setLoadingMore(false)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import type { SalesPageSection, EducationSectionResolvedData, PlanForMembershipSection } from "@/app/admin/sales-pages/builder/sales-pages-actions"
 import { getEducationSectionResolvedData, getPlansByIdsForSection } from "@/app/admin/sales-pages/builder/sales-pages-actions"
 import { TextBlock } from "@/components/sales-page/TextBlock"
@@ -8,6 +8,11 @@ import { TextBlock } from "@/components/sales-page/TextBlock"
 function getContentValue(c: Record<string, unknown> | undefined, key: string): string {
   const v = c?.[key]
   return typeof v === "string" ? v : ""
+}
+
+/** Wide container for the featured top plan when exactly four plans are shown. */
+function MembershipPlansFeaturedTopSlot({ children }: { children: ReactNode }) {
+  return <div className="w-full max-w-7xl mx-auto mb-10 md:mb-12">{children}</div>
 }
 
 function getYouTubeEmbedUrl(url: string) {
@@ -153,9 +158,6 @@ function MembershipPlansSectionContent({
     }
   }, [planIds.join(",")])
 
-  const freePlan = plans.find((p) => p.slug === "free" || p.slug === "Free" || p.name?.toLowerCase() === "free")
-  const paidPlans = plans.filter((p) => p !== freePlan)
-
   const renderPlanCard = (plan: PlanForMembershipSection, isCompact?: boolean) => {
     const isPopular = plan.most_popular === true
     const currencySymbol = plan.currency === "USD" || plan.currency == null || plan.currency === "" ? "$" : plan.currency
@@ -170,14 +172,26 @@ function MembershipPlansSectionContent({
 
     if (isCompact) {
       const firstPlanFeatures = features.slice(0, 6)
+      const checkClass = isPopular ? "text-purple-600" : "text-blue-500"
       return (
         <div
-          key={plan.id}
-          className="bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl border border-blue-200 p-6"
+          className={
+            isPopular
+              ? "relative bg-gradient-to-br from-purple-100 to-white rounded-2xl shadow-2xl border-2 border-purple-300 p-6"
+              : "bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-xl border border-blue-200 p-6"
+          }
         >
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
+          {isPopular && (
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                Most Popular
+              </span>
+            </div>
+          )}
+          <div className={`flex flex-col md:flex-row md:items-start md:justify-between gap-8 ${isPopular ? "pt-2" : ""}`}>
             <div className="md:w-1/4 text-center md:text-center">
               <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
+              {showPrice && <p className="text-lg font-bold text-gray-900 mt-1">{priceDisplay}</p>}
               {plan.description?.trim() && (
                 <div className="text-sm mt-2">
                   <TextBlock text={plan.description} />
@@ -188,7 +202,7 @@ function MembershipPlansSectionContent({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
                 {firstPlanFeatures.map((f, i) => (
                   <div key={i} className="flex items-start space-x-3">
-                    <i className="fa-solid fa-check mt-1 text-blue-500 flex-shrink-0" />
+                    <i className={`fa-solid fa-check mt-1 flex-shrink-0 ${checkClass}`} />
                     <span className="text-sm text-gray-700">{f}</span>
                   </div>
                 ))}
@@ -199,8 +213,12 @@ function MembershipPlansSectionContent({
                 href={ctaHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full md:w-auto md:inline-block text-center px-8 py-4 bg-white rounded-full border-2 hover:bg-gray-50 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
-                style={{ color: accentColor, borderColor: accentColor }}
+                className={
+                  isPopular
+                    ? "block w-full md:w-auto md:inline-block text-center px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full hover:from-purple-700 hover:to-indigo-700 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+                    : "block w-full md:w-auto md:inline-block text-center px-8 py-4 bg-white rounded-full border-2 hover:bg-gray-50 shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+                }
+                style={!isPopular ? { color: accentColor, borderColor: accentColor } : undefined}
               >
                 {ctaText}
               </a>
@@ -212,7 +230,6 @@ function MembershipPlansSectionContent({
 
     return (
       <div
-        key={plan.id}
         className={
           isPopular
             ? "bg-gradient-to-br from-purple-100 to-white rounded-2xl shadow-2xl p-8 border-2 border-purple-300 relative"
@@ -261,9 +278,65 @@ function MembershipPlansSectionContent({
   }
 
   const bg = getSectionBg(sectionIndex, "membership_plans")
+  const planCount = plans.length
+
+  let plansLayout: ReactNode = null
+  if (planCount > 0) {
+    if (planCount === 4) {
+      plansLayout = (
+        <>
+          <MembershipPlansFeaturedTopSlot>{renderPlanCard(plans[0], true)}</MembershipPlansFeaturedTopSlot>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
+            {plans.slice(1).map((p) => (
+              <div key={p.id} className="min-w-0">
+                {renderPlanCard(p)}
+              </div>
+            ))}
+          </div>
+        </>
+      )
+    } else if (planCount === 3) {
+      plansLayout = (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
+          {plans.map((p) => (
+            <div key={p.id} className="min-w-0">
+              {renderPlanCard(p)}
+            </div>
+          ))}
+        </div>
+      )
+    } else if (planCount === 2) {
+      plansLayout = (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
+          {plans.map((p) => (
+            <div key={p.id} className="min-w-0">
+              {renderPlanCard(p)}
+            </div>
+          ))}
+        </div>
+      )
+    } else if (planCount === 1) {
+      plansLayout = (
+        <div className="max-w-md mx-auto w-full min-w-0">
+          {renderPlanCard(plans[0])}
+        </div>
+      )
+    } else {
+      plansLayout = (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
+          {plans.map((p) => (
+            <div key={p.id} className="min-w-0">
+              {renderPlanCard(p)}
+            </div>
+          ))}
+        </div>
+      )
+    }
+  }
+
   return (
     <section id="membership-plans" className={`py-16 md:py-24 ${bg}`}>
-      <div className="max-w-6xl mx-auto px-6 text-center">
+      <div className="max-w-7xl mx-auto px-6 text-center">
         {headline && (
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mb-6">{headline}</h2>
         )}
@@ -272,20 +345,7 @@ function MembershipPlansSectionContent({
             <TextBlock text={subheadline} className="text-slate-600" />
           </div>
         )}
-        {plans.length === 0 ? null : freePlan && plans.length === 4 ? (
-          <>
-            <div className="mb-12">
-              {renderPlanCard(freePlan, true)}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {paidPlans.map((p) => renderPlanCard(p))}
-            </div>
-          </>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            {plans.map((p) => renderPlanCard(p))}
-          </div>
-        )}
+        {plansLayout === null ? null : <div className={subheadline ? undefined : "mt-12"}>{plansLayout}</div>}
       </div>
     </section>
   )

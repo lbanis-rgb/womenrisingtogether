@@ -1,6 +1,13 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createSupabaseServiceClient } from "@supabase/supabase-js"
+
+function createServiceRoleClient() {
+  return createSupabaseServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false },
+  })
+}
 
 /**
  * Start or get an existing conversation with another user
@@ -254,7 +261,8 @@ export async function markConversationRead(conversationId: string): Promise<void
 }
 
 /**
- * Get all group messages for current user
+ * Get all group messages for groups the current user belongs to.
+ * Uses membership-derived group IDs, then a service-role read so visibility does not depend on messages RLS alone.
  */
 export async function getGroupMessages() {
   const supabase = await createClient()
@@ -265,7 +273,22 @@ export async function getGroupMessages() {
 
   if (!user) return []
 
-  const { data, error } = await supabase
+  const { data: memberships, error: memError } = await supabase
+    .from("group_members")
+    .select("group_id")
+    .eq("user_id", user.id)
+
+  if (memError) {
+    console.error("getGroupMessages: group_members lookup failed:", memError)
+    return []
+  }
+
+  const groupIds = [...new Set((memberships ?? []).map((m) => m.group_id).filter(Boolean))] as string[]
+  if (groupIds.length === 0) return []
+
+  const service = createServiceRoleClient()
+
+  const { data, error } = await service
     .from("messages")
     .select(`
       id,
@@ -277,23 +300,28 @@ export async function getGroupMessages() {
       group_message_reads ( user_id, hidden_at )
     `)
     .not("group_id", "is", null)
+    .in("group_id", groupIds)
     .order("created_at", { ascending: false })
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error("getGroupMessages: messages query failed:", error)
+    return []
+  }
 
   return (data || [])
     .filter((msg: any) => {
-      const readRecord = msg.group_message_reads?.find((r: any) => r.user_id === user.id)
+      const readRecord = (msg.group_message_reads ?? []).find((r: any) => r.user_id === user.id)
       if (readRecord?.hidden_at != null) return false
       return true
     })
-    .map((msg: any) => ({
-      ...msg,
-      is_read:
-        msg.group_message_reads?.some(
-          (r: any) => r.user_id === user.id
-        ) ?? false,
-    }))
+    .map((msg: any) => {
+      const myReads = (msg.group_message_reads ?? []).filter((r: { user_id: string }) => r.user_id === user.id)
+      const { group_message_reads: _omit, ...rest } = msg
+      return {
+        ...rest,
+        is_read: myReads.length > 0,
+      }
+    })
 }
 
 /**
@@ -308,10 +336,15 @@ export async function markGroupMessageRead(messageId: string) {
 
   if (!user) throw new Error("Unauthorized")
 
-  await supabase.from("group_message_reads").upsert({
+  const { error } = await supabase.from("group_message_reads").upsert({
     message_id: messageId,
     user_id: user.id,
   })
+
+  if (error) {
+    console.error("markGroupMessageRead failed:", error)
+    throw error
+  }
 }
 
 /**
