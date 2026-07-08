@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 
 export default async function OptInDemoPage() {
   const supabase = await createClient()
@@ -110,6 +111,7 @@ export default async function OptInDemoPage() {
               Privacy
             </a>
           )}
+          <CookiePreferencesLink className="hover:underline" />
         </div>
         <div className="mt-4">
           © {new Date().getFullYear()} All Rights Reserved.

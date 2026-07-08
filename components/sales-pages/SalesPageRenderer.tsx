@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { SalesSectionRenderer } from "@/components/admin/sales-pages/SalesSectionRenderer"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 import type { SalesPageSection } from "@/app/admin/sales-pages/builder/sales-pages-actions"
 
 const brandLogoUrl = process.env.NEXT_PUBLIC_BRAND_LOGO_URL
@@ -62,6 +63,7 @@ export function SalesPageRenderer({ sections, title, siteName = "Community Platf
           >
             Privacy
           </a>
+          <CookiePreferencesLink className="hover:text-gray-800 transition" />
         </div>
         {/* Copyright */}
         <p className="text-xs text-gray-400">

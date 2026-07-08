@@ -326,6 +326,11 @@ export default function AdminPlansPage() {
     displayToast("Redirect URL copied")
   }
 
+  const copyPlanId = (planId: string) => {
+    navigator.clipboard.writeText(planId)
+    displayToast("Plan ID copied")
+  }
+
   // CRUD-ish helpers (non-functional for now, keeping for UI)
   const createPlan = async () => {
     if (!validateForm()) return
@@ -576,22 +581,17 @@ export default function AdminPlansPage() {
     }
   }
 
-  // ESC closes modals
+  // ESC closes non-form modals only (create/edit plan modals require explicit Cancel/Submit)
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return
-      if (showNewPlanModal) setShowNewPlanModal(false)
-      if (showEditPlanModal) {
-        setShowEditPlanModal(false)
-        resetForm()
-      }
       if (showPreviewModal) setShowPreviewModal(false)
       if (showUpgradeSettingsModal) setShowUpgradeSettingsModal(false)
       if (deleteModalOpen) cancelDelete()
     }
     window.addEventListener("keydown", onEsc)
     return () => window.removeEventListener("keydown", onEsc)
-  }, [showNewPlanModal, showEditPlanModal, showPreviewModal, showUpgradeSettingsModal, deleteModalOpen])
+  }, [showPreviewModal, showUpgradeSettingsModal, deleteModalOpen])
 
   return (
     <div className="p-8">
@@ -672,6 +672,17 @@ export default function AdminPlansPage() {
                     <tr key={plan.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-xs font-mono text-gray-400">Plan ID: {plan.id}</span>
+                            <button
+                              onClick={() => copyPlanId(plan.id)}
+                              className="text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+                              aria-label="Copy plan ID"
+                              title="Copy plan ID"
+                            >
+                              <Clipboard className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                           <div className="font-medium text-gray-900 flex items-center">
                             {plan.name}
                             {plan.most_popular && (
@@ -778,10 +789,7 @@ export default function AdminPlansPage() {
 
       {/* New Plan Modal */}
       {showNewPlanModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-          onClick={(e) => e.target === e.currentTarget && setShowNewPlanModal(false)}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">New Plan</h2>
@@ -1092,10 +1100,7 @@ export default function AdminPlansPage() {
       )}
 
       {showEditPlanModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-          onClick={(e) => e.target === e.currentTarget && setShowEditPlanModal(false)}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Edit Plan</h2>

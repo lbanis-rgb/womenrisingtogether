@@ -228,7 +228,7 @@ export default function RegForm({
         <form onSubmit={handleSubmit} className="mt-6 space-y-3" noValidate>
           {enableGoogleAuth && (
             <>
-              <GoogleAuthButton />
+              <GoogleAuthButton next="/members/dashboard" />
 
               <div className="flex items-center my-4">
                 <div className="flex-grow border-t border-slate-200" />

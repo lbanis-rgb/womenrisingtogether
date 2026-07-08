@@ -1,11 +1,13 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { Toaster } from "sonner"
 import AuthProvider from "@/components/AuthProvider"
+import { CookieConsentProvider } from "@/components/cookies/CookieConsentProvider"
+import { CookieConsentManager } from "@/components/cookies/CookieConsentManager"
+import { ConsentGatedAnalytics } from "@/components/cookies/ConsentGatedAnalytics"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -66,9 +68,12 @@ export default function RootLayout({
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
       </head>
       <body className="bg-gray-50 font-[Inter] antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <CookieConsentProvider>
+          <AuthProvider>{children}</AuthProvider>
+          <CookieConsentManager />
+          <ConsentGatedAnalytics />
+        </CookieConsentProvider>
         <Toaster />
-        <Analytics />
       </body>
     </html>
   )

@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { assertCanManageGroup } from "@/lib/community/groups/assert-can-manage-group"
 
 export type GroupForListing = {
   id: string
@@ -337,6 +338,11 @@ export async function updateGroup(
 
     if (!user) {
       return { success: false, error: "You must be logged in to update a group" }
+    }
+
+    const permission = await assertCanManageGroup(supabase, groupId, user.id)
+    if (!permission.ok) {
+      return { success: false, error: permission.error }
     }
 
     // Check for unique slug (excluding current group)

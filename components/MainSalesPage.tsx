@@ -1,5 +1,6 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 import type {
   ActivePlanForSalesPage,
   SalesPageRow,
@@ -1147,6 +1148,7 @@ export function MainSalesPage({
               >
                 Privacy
               </a>
+              <CookiePreferencesLink className="text-gray-400 hover:text-white transition-colors text-sm" />
             </div>
           </div>
 

@@ -12,6 +12,10 @@ import {
   type EducationContentOption,
   type PlanForMembershipSection,
 } from "@/app/admin/sales-pages/builder/sales-pages-actions"
+import {
+  HERO_CUSTOM_ANCHOR,
+  isValidCustomButtonUrl,
+} from "@/lib/sales-pages/hero-button"
 
 type FieldKind = "input" | "textarea" | "image_url" | "link_url"
 
@@ -181,6 +185,7 @@ function normalizeHeroContent(c: Record<string, unknown> | undefined): Record<st
     hero_image: String(raw.hero_image ?? raw.background_image ?? ""),
     primary_button_text: String(raw.primary_button_text ?? ""),
     primary_button_anchor: String(raw.primary_button_anchor ?? raw.primary_button_url ?? "#membership-plans"),
+    custom_button_url: String(raw.custom_button_url ?? raw.customButtonUrl ?? ""),
     backgroundImage: raw.backgroundImage === true || raw.backgroundImage === "true",
   }
 }
@@ -426,6 +431,7 @@ export function EditSectionModal({
   onSave,
 }: EditSectionModalProps) {
   const [formData, setFormData] = useState<Record<string, string | string[]>>({})
+  const [heroSaveError, setHeroSaveError] = useState<string | null>(null)
   const [educationOptions, setEducationOptions] = useState<{
     experts: EducationExpertOption[]
     video: EducationContentOption[]
@@ -437,6 +443,7 @@ export function EditSectionModal({
 
   useEffect(() => {
     if (!section) return
+    setHeroSaveError(null)
     const c = section.content ?? {}
     if (section.type === "hero") {
       setFormData(normalizeHeroContent(c as Record<string, unknown>))
@@ -574,6 +581,15 @@ export function EditSectionModal({
   const handleSave = () => {
     if (!section) return
     if (section.type === "hero") {
+      const anchor = String(formData.primary_button_anchor ?? "")
+      if (anchor === HERO_CUSTOM_ANCHOR) {
+        const customUrl = String(formData.custom_button_url ?? "").trim()
+        if (!isValidCustomButtonUrl(customUrl)) {
+          setHeroSaveError("Enter a valid custom button URL (https://…, /path, or #anchor).")
+          return
+        }
+      }
+      setHeroSaveError(null)
       const heroContent = { ...formData, backgroundImage: formData.backgroundImage === true || formData.backgroundImage === "true" }
       onSave({
         ...section,
@@ -779,7 +795,12 @@ export function EditSectionModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">Button Anchor Target</label>
                   <select
                     value={(formData.primary_button_anchor as string) ?? "#membership-plans"}
-                    onChange={(e) => handleChange("primary_button_anchor", e.target.value)}
+                    onChange={(e) => {
+                      handleChange("primary_button_anchor", e.target.value)
+                      if (e.target.value !== HERO_CUSTOM_ANCHOR) {
+                        setHeroSaveError(null)
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                   >
                     {HERO_ANCHOR_OPTIONS.map((opt) => (
@@ -789,6 +810,29 @@ export function EditSectionModal({
                     ))}
                   </select>
                 </div>
+                {(formData.primary_button_anchor as string) === HERO_CUSTOM_ANCHOR && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Custom Button URL</label>
+                    <Input
+                      type="text"
+                      value={(formData.custom_button_url as string) ?? ""}
+                      onChange={(e) => {
+                        handleChange("custom_button_url", e.target.value)
+                        if (heroSaveError) setHeroSaveError(null)
+                      }}
+                      placeholder="https://example.com"
+                      className="w-full"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Enter the full URL where the primary button should send visitors.
+                    </p>
+                    {heroSaveError && (
+                      <p className="mt-2 text-sm text-red-600" role="alert">
+                        {heroSaveError}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-4">
                 <div>

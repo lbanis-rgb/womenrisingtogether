@@ -4,6 +4,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState, type ReactNode } from "react"
+import { AI_MENTOR_STUDIO_ICON_SRC } from "@/lib/ai-mentors/assets"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 import { useShellConfig } from "./ShellConfig"
 import { getInboxUnreadIndicator } from "@/app/members/inbox/inbox-indicator-actions"
 
@@ -24,8 +26,58 @@ function classNames(...x: Array<string | false | null | undefined>) {
 }
 
 type RouteEntry =
-  | { href: string; icon: string; activeMatch?: (p: string) => boolean }
-  | { icon: string; activeMatch: (p: string) => boolean }
+  | { href: string; icon: string; imageIcon?: string; activeMatch?: (p: string) => boolean }
+  | { icon: string; imageIcon?: string; activeMatch: (p: string) => boolean }
+
+function NavMenuIcon({
+  itemId,
+  icon,
+  imageIcon,
+  active,
+  sidebarCollapsed,
+}: {
+  itemId: string
+  icon: string
+  imageIcon?: string
+  active: boolean
+  sidebarCollapsed: boolean
+}) {
+  if (itemId === "aimentors" && imageIcon) {
+    return (
+      <span
+        className={classNames(
+          "mr-3 inline-flex h-5 w-5 shrink-0 items-center justify-center",
+          sidebarCollapsed && "lg:mr-0",
+        )}
+      >
+        <img
+          src={imageIcon}
+          alt=""
+          aria-hidden="true"
+          className={classNames(
+            "h-5 w-5 object-contain transition-all duration-200",
+            active
+              ? "brightness-110 drop-shadow-sm"
+              : "opacity-90 group-hover:opacity-100 group-hover:scale-105",
+          )}
+        />
+      </span>
+    )
+  }
+
+  return (
+    <i
+      className={classNames(
+        "fa-solid w-5 mr-3",
+        icon,
+        sidebarCollapsed && "lg:mr-0",
+        "text-gray-500",
+        active && "text-white",
+        !active && "group-hover:text-[var(--brand-accent)]",
+      )}
+    />
+  )
+}
 
 const ROUTE_MAP: Record<string, RouteEntry> = {
   dashboard: {
@@ -60,6 +112,12 @@ const ROUTE_MAP: Record<string, RouteEntry> = {
   support: {
     href: "/members/support",
     icon: "fa-life-ring",
+  },
+  aimentors: {
+    href: "/members/aimentors",
+    icon: "fa-wand-magic-sparkles",
+    imageIcon: AI_MENTOR_STUDIO_ICON_SRC,
+    activeMatch: (p: string) => p.startsWith("/members/aimentors"),
   },
 }
 
@@ -382,6 +440,7 @@ export function AppShell({
               {internalItems.map((item) => {
                 const entry = ROUTE_MAP[item.id]
                 const icon = entry?.icon || "fa-circle"
+                const imageIcon = entry?.imageIcon
                 const hasChildren = isParentWithChildren(item)
                 const children = hasChildren
                   ? ((item as { children?: Array<{ id: string; label: string; order?: number; visible?: boolean }> })
@@ -408,13 +467,12 @@ export function AppShell({
                             : "text-gray-600 hover:text-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/5",
                         )}
                       >
-                        <i
-                          className={classNames(
-                            "fa-solid w-5 mr-3",
-                            icon,
-                            sidebarCollapsed && "lg:mr-0",
-                            active ? "text-white" : "text-gray-500 group-hover:text-[var(--brand-accent)]",
-                          )}
+                        <NavMenuIcon
+                          itemId={item.id}
+                          icon={icon}
+                          imageIcon={imageIcon}
+                          active={active}
+                          sidebarCollapsed={sidebarCollapsed}
                         />
                         <span className={classNames(sidebarCollapsed && "lg:hidden")}>{item.label}</span>
                         <i
@@ -475,15 +533,12 @@ export function AppShell({
                         : "text-gray-600 hover:text-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/5",
                     )}
                   >
-                    <i
-                      className={classNames(
-                        "fa-solid w-5 mr-3",
-                        icon,
-                        sidebarCollapsed && "lg:mr-0",
-                        "text-gray-500",
-                        active && "text-white",
-                        !active && "group-hover:text-[var(--brand-accent)]",
-                      )}
+                    <NavMenuIcon
+                      itemId={item.id}
+                      icon={icon}
+                      imageIcon={imageIcon}
+                      active={active}
+                      sidebarCollapsed={sidebarCollapsed}
                     />
                     <span className={classNames(sidebarCollapsed && "lg:hidden")}>{item.label}</span>
                     {active ? (
@@ -556,8 +611,7 @@ export function AppShell({
               <div>
                 © {new Date().getFullYear()} {config.siteTitle || "Platform"}
               </div>
-              {(config.siteTermsUrl || config.sitePrivacyUrl) && (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                   {config.siteTermsUrl && (
                     <a
                       href={config.siteTermsUrl}
@@ -579,8 +633,9 @@ export function AppShell({
                       Privacy
                     </a>
                   )}
+                  {(config.siteTermsUrl || config.sitePrivacyUrl) && <span className="text-gray-300">|</span>}
+                  <CookiePreferencesLink className="text-gray-400 hover:text-[var(--brand-accent)] transition-colors" />
                 </div>
-              )}
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import OptInForm from "@/app/[slug]/opt-in-form"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 
 export type OptInPageData = {
   id: string
@@ -168,6 +169,7 @@ export async function OptInPageRenderer({
           <a href="/privacy" className="hover:underline">
             Privacy
           </a>
+          <CookiePreferencesLink className="hover:underline" />
         </div>
         <div className="mt-4">© {new Date().getFullYear()} All Rights Reserved.</div>
       </footer>

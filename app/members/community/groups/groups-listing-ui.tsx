@@ -26,6 +26,7 @@ import { requestToJoinGroup, getMyGroupJoinRequestStatuses } from "./actions/gro
 import { ContactAdminModal } from "./components/contact-admin-modal"
 import type { JoinRequestRow } from "./actions/get-admin-join-requests" // Import JoinRequestRow
 import { joinGroupByInviteCode } from "./actions/join-by-invite-code" // Import the server action for joining by invite code
+import { canManageGroup } from "@/lib/community/groups/can-manage-group"
 
 // Utility function for class names
 function cx(...classes: (string | false | undefined)[]) {
@@ -196,7 +197,7 @@ function GroupCard({
           <div className="flex items-center gap-2">
             {isMember && <RoleBadge role={group.role} />}
 
-            {(group.role === "owner" || group.role === "admin") && (
+            {(canManageGroup(group.role)) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -1427,7 +1428,7 @@ export function GroupsListingUI({
         {selectedTab === "moderating" && moderatingSubTab === "requests" ? (
           <AdminJoinRequestsList requests={adminJoinRequests} />
         ) : (filteredGroups?.length ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {(filteredGroups ?? []).filter(Boolean).map((g) => (
               <GroupCard
                 key={g.id}

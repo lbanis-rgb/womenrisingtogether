@@ -1,18 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Image from "next/image"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Wrench, Lock, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { createClient } from "@/lib/supabase/browser"
 import { getMemberTools, type MemberTool } from "./actions"
 
-export default function ToolsPage() {
+const LAUNCH_ERROR_MESSAGES: Record<string, string> = {
+  tool_unavailable: "That tool is unavailable right now.",
+  tool_missing_launch_url: "This tool does not have a launch URL configured.",
+  token_secret_missing: "This tool is configured for secure token login, but the token secret is not configured.",
+  tool_launch_failed: "We could not launch that tool. Please try again.",
+}
+
+function ToolsPageContent() {
+  const searchParams = useSearchParams()
   const [tools, setTools] = useState<MemberTool[]>([])
   const [selectedTool, setSelectedTool] = useState<MemberTool | null>(null)
   const [upgradeModalTool, setUpgradeModalTool] = useState<MemberTool | null>(null)
   const [loading, setLoading] = useState(true)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
   const [brandAccentColor, setBrandAccentColor] = useState<string | null>(null)
   const [brandBackgroundColor, setBrandBackgroundColor] = useState<string | null>(null)
@@ -20,16 +31,6 @@ export default function ToolsPage() {
   const [pageTitle, setPageTitle] = useState("Tools and Resources")
 
   const supabase = createClient()
-
-  useEffect(() => {
-    const loadTools = async () => {
-      setLoading(true)
-      const data = await getMemberTools()
-      setTools(data)
-      setLoading(false)
-    }
-    loadTools()
-  }, [])
 
   useEffect(() => {
     const loadBrandSettings = async () => {
@@ -66,10 +67,37 @@ export default function ToolsPage() {
     loadBrandSettings()
   }, [supabase])
 
+  useEffect(() => {
+    const loadTools = async () => {
+      setLoading(true)
+      const data = await getMemberTools()
+      setTools(data)
+      setLoading(false)
+    }
+    loadTools()
+  }, [])
+
+  useEffect(() => {
+    const error = searchParams.get("error")
+    const upgrade = searchParams.get("upgrade")
+
+    if (upgrade === "required") {
+      setStatusMessage("Upgrade required to launch that tool.")
+      return
+    }
+
+    if (error) {
+      setStatusMessage(LAUNCH_ERROR_MESSAGES[error] ?? "We could not launch that tool. Please try again.")
+      return
+    }
+
+    setStatusMessage(null)
+  }, [searchParams])
+
   const handleLaunchClick = (tool: MemberTool) => {
-    if (tool.isAvailable && tool.launch_url) {
-      window.open(tool.launch_url, "_blank", "noopener,noreferrer")
-    } else if (!tool.isAvailable) {
+    if (tool.isAvailable) {
+      window.location.href = `/members/tools/launch/${tool.id}`
+    } else {
       setUpgradeModalTool(tool)
     }
   }
@@ -126,6 +154,12 @@ export default function ToolsPage() {
             Powerful tools to help you plan, create, and grow your business
           </p>
         </div>
+
+        {statusMessage && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {statusMessage}
+          </div>
+        )}
 
       <div className="grid gap-6 sm:gap-8 md:grid-cols-2">
           {tools.map((tool) => (
@@ -229,18 +263,14 @@ export default function ToolsPage() {
                       <>
                         <p className="text-sm text-emerald-700 mb-4">This tool is included with your current plan.</p>
                         <Button
+                          asChild
                           className="w-full"
                           style={{
                             backgroundColor: brandAccentColor || "#0f172a",
                             color: "#ffffff",
                           }}
-                          onClick={() => {
-                            if (selectedTool.launch_url) {
-                              window.open(selectedTool.launch_url, "_blank", "noopener,noreferrer")
-                            }
-                          }}
                         >
-                          Launch Tool
+                          <Link href={`/members/tools/launch/${selectedTool.id}`}>Launch Tool</Link>
                         </Button>
                       </>
                     ) : (
@@ -293,5 +323,21 @@ export default function ToolsPage() {
         </Dialog>
       </div>
     </div>
+  )
+}
+
+export default function ToolsPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-8">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ToolsPageContent />
+    </Suspense>
   )
 }

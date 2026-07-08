@@ -42,7 +42,7 @@ export default async function MembersLayout({
     )
     .single()
 
-  const allowedKeys = ["dashboard", "courses", "masterclasses", "tools", "community", "education", "productsservices", "support"]
+  const allowedKeys = ["dashboard", "courses", "masterclasses", "tools", "community", "education", "productsservices", "support", "aimentors"]
 
   const defaultLabels: Record<string, string> = {
     dashboard: "Dashboard",
@@ -54,6 +54,7 @@ export default async function MembersLayout({
     businesses: "Products & Services",
     productsservices: "Products & Services",
     support: "Support",
+    aimentors: "AI Mentors",
   }
 
   type NavItem = {
@@ -85,6 +86,19 @@ export default async function MembersLayout({
 
     // Normalize: internal (allowed keys) + external (type external + url)
     if (Array.isArray(parsedNav)) {
+      if (!parsedNav.some((item) => item?.id === "aimentors")) {
+        const maxOrder = parsedNav.reduce((max, item) => {
+          const order = typeof item?.order === "number" ? item.order : 0
+          return Math.max(max, order)
+        }, 0)
+        parsedNav.push({
+          id: "aimentors",
+          label: defaultLabels.aimentors,
+          visible: true,
+          order: maxOrder + 1,
+        })
+      }
+
       const internalItems = parsedNav
         .filter((item) => {
           const id = item.id
@@ -186,6 +200,7 @@ export default async function MembersLayout({
       { id: "education", label: defaultLabels.education, visible: true, order: 6 },
       { id: "productsservices", label: defaultLabels.businesses, visible: true, order: 7 },
       { id: "support", label: defaultLabels.support, visible: true, order: 8 },
+      { id: "aimentors", label: defaultLabels.aimentors, visible: true, order: 9 },
       ...externalOnly,
     ]
   }

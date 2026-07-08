@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getSalesPageById } from "@/app/admin/sales-pages/builder/sales-pages-actions"
 import { SalesSectionRenderer } from "@/components/admin/sales-pages/SalesSectionRenderer"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 
 const brandLogoUrl = process.env.NEXT_PUBLIC_BRAND_LOGO_URL
 
@@ -67,6 +68,7 @@ export default async function PreviewPage({
             <Link href="/privacy" className="hover:text-white transition">
               Privacy
             </Link>
+            <CookiePreferencesLink className="hover:text-white transition" />
           </div>
         </div>
         <div className="text-center text-xs pb-6 opacity-70">

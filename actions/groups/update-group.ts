@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { assertCanManageGroup } from "@/lib/community/groups/assert-can-manage-group"
 
 export async function updateGroup({
   groupId,
@@ -32,6 +33,11 @@ export async function updateGroup({
 
   if (userError || !user) {
     throw new Error("Unauthorized")
+  }
+
+  const permission = await assertCanManageGroup(supabase, groupId, user.id)
+  if (!permission.ok) {
+    throw new Error(permission.error)
   }
 
   const { data: existingRow, error: existingError } = await supabase

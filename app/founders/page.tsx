@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import FoundersFaqAccordion from "@/components/FoundersFaqAccordion"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 import type { ActivePlanForSalesPage, SalesPageRow } from "@/app/admin/sales-pages/sales-page-actions"
 import { MainSalesPage } from "@/components/MainSalesPage"
 
@@ -416,6 +417,7 @@ export default async function FoundersPage() {
               >
                 Privacy
               </a>
+              <CookiePreferencesLink className="text-gray-400 hover:text-white transition-colors text-sm" />
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center">

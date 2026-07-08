@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
+import { getClientOrigin, getResetPasswordRedirectUrl } from "@/lib/auth/auth-urls"
 
 interface ProfileData {
   admin_display_name: string | null
@@ -110,8 +111,13 @@ export default function AdminProfilePage() {
       return
     }
 
+    const origin = getClientOrigin()
+    const redirectTo = getResetPasswordRedirectUrl(origin)
+
+    console.log("[forgot-password admin] resetPasswordForEmail redirectTo:", redirectTo)
+
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/admin/profile`,
+      redirectTo,
     })
 
     if (error) {

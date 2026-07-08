@@ -1,6 +1,5 @@
 "use client"
 
-import { format } from "date-fns"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
@@ -12,10 +11,36 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, ChevronLeft, ChevronRight, Pencil, Play, Plus, Video } from "lucide-react"
+import { Calendar, ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Play, Plus, Trash2, Video } from "lucide-react"
+import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { SponsoredMasterclassCard } from "@/components/masterclasses/SponsoredMasterclassCard"
+import {
+  buildMasterclassScheduledAtIso,
+  formatMasterclassDate,
+  formatMasterclassDualTimezone,
+  formatMasterclassPacificTime,
+  getMasterclassScheduleInputValues,
+  isMasterclassOnDate,
+  parseMasterclassScheduledAt,
+} from "@/lib/masterclasses/format-masterclass-time"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
-import { reserveMasterclass, updateMasterclass } from "./actions"
+import { deleteMasterclass, reserveMasterclass, updateMasterclass } from "./actions"
 import { createMasterclass } from "./actions/create-masterclass"
 import type { MasterclassForUI } from "./page"
 
@@ -39,23 +64,6 @@ function getBadgeStyles(badge: MasterclassBadge | "live" | "replay"): string {
     default:
       return `${base} bg-slate-200 text-slate-700`
   }
-}
-
-const formatDualTimezone = (dateString: string) => {
-  const date = new Date(dateString)
-  const pst = date.toLocaleString("en-US", {
-    timeZone: "America/Los_Angeles",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-  const est = date.toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-  return `${pst} PST / ${est} EST`
 }
 
 function getInitials(name: string): string {
@@ -190,6 +198,8 @@ function MasterclassCard({
   brandAccentColor,
   attendeeCount,
   onSelect,
+  onEdit,
+  onDelete,
   getBadgeStyles,
   getInitials,
 }: {
@@ -198,9 +208,13 @@ function MasterclassCard({
   brandAccentColor: string
   attendeeCount: number
   onSelect: (m: MasterclassForUI) => void
+  onEdit?: (m: MasterclassForUI) => void
+  onDelete?: (m: MasterclassForUI) => void
   getBadgeStyles: (b: MasterclassBadge | "live" | "replay") => string
   getInitials: (n: string) => string
 }) {
+  const canManage = masterclass.isOwner && onEdit && onDelete
+
   return (
     <div
       className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-lg hover:-translate-y-1 cursor-pointer transition-shadow duration-200"
@@ -217,6 +231,43 @@ function MasterclassCard({
         <div className="absolute top-3 left-3">
           <span className={getBadgeStyles(badge)}>{badge}</span>
         </div>
+        {canManage && (
+          <div className="absolute top-3 right-3 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Masterclass options"
+                  className="h-8 w-8 rounded-full bg-white/90 hover:bg-white text-gray-700 flex items-center justify-center shadow-md transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEdit(masterclass)
+                  }}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete(masterclass)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
       <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
         <h3 className="font-bold text-base sm:text-lg text-gray-900 leading-snug line-clamp-2">{masterclass.title}</h3>
@@ -233,16 +284,16 @@ function MasterclassCard({
           {masterclass.scheduledAt ? (
             <>
               <span className="font-semibold text-gray-900">
-                {format(new Date(masterclass.scheduledAt), "EEE, MMM d")}
+                {formatMasterclassDate(masterclass.scheduledAt)}
               </span>
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium break-words text-left"
                 style={{
                   backgroundColor: `${brandAccentColor}15`,
                   color: brandAccentColor,
                 }}
               >
-                {formatDualTimezone(masterclass.scheduledAt)}
+                {formatMasterclassDualTimezone(masterclass.scheduledAt)}
               </span>
             </>
           ) : (
@@ -354,17 +405,9 @@ export default function MasterclassesPageClient({
   }
 
   const getEventsForDate = (date: Date) =>
-    calendarMasterclasses.filter((m) => {
-      const d = new Date(m.scheduledAt)
-      return (
-        d.getFullYear() === date.getFullYear() &&
-        d.getMonth() === date.getMonth() &&
-        d.getDate() === date.getDate()
-      )
-    })
+    calendarMasterclasses.filter((m) => isMasterclassOnDate(m.scheduledAt, date))
 
-  const formatEventTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+  const formatEventTime = (iso: string) => formatMasterclassPacificTime(iso)
 
   const formatMonthYear = (date: Date) => date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
 
@@ -388,14 +431,63 @@ export default function MasterclassesPageClient({
     setCalendarModalOpen(false)
   }
 
+  const openEditModal = (m: MasterclassForUI) => {
+    setEditingMasterclass(m)
+    setEditTitle(m.title)
+    setEditDescription(m.description)
+    setEditTopics(m.topics.join("\n"))
+    setEditWhoItsFor(m.whoItsFor ?? "")
+    setEditVideoUrl(m.videoUrl ?? "")
+    setEditImagePath(m.imagePath)
+    setEditDuration(m.durationMinutes ?? 60)
+
+    if (m.scheduledAt) {
+      const scheduleValues = getMasterclassScheduleInputValues(m.scheduledAt)
+      setEditDate(scheduleValues?.date ?? "")
+      setEditTime(scheduleValues?.time ?? "")
+    } else {
+      setEditDate("")
+      setEditTime("")
+    }
+
+    setEditError(null)
+    setEditModalOpen(true)
+  }
+
+  const handleDeleteMasterclass = async () => {
+    if (!deleteConfirmMasterclass) return
+
+    setIsDeleting(true)
+    const result = await deleteMasterclass(deleteConfirmMasterclass.id)
+    setIsDeleting(false)
+
+    if (!result.success) {
+      toast.error(result.error ?? "Failed to delete masterclass")
+      return
+    }
+
+    setDeleteConfirmMasterclass(null)
+    setSelectedMasterclass(null)
+    setEditModalOpen(false)
+    setEditingMasterclass(null)
+    toast.success("Masterclass deleted")
+    router.refresh()
+  }
+
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [editTopics, setEditTopics] = useState("")
   const [editWhoItsFor, setEditWhoItsFor] = useState("")
   const [editVideoUrl, setEditVideoUrl] = useState("")
+  const [editDate, setEditDate] = useState("")
+  const [editTime, setEditTime] = useState("")
+  const [editDuration, setEditDuration] = useState(60)
   const [editImagePath, setEditImagePath] = useState<string | null>(null)
   const [editImageUploading, setEditImageUploading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
+  const [editingMasterclass, setEditingMasterclass] = useState<MasterclassForUI | null>(null)
+  const [deleteConfirmMasterclass, setDeleteConfirmMasterclass] = useState<MasterclassForUI | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [scheduleTitle, setScheduleTitle] = useState("")
   const [scheduleDescription, setScheduleDescription] = useState("")
@@ -629,6 +721,8 @@ export default function MasterclassesPageClient({
                   brandAccentColor={brandAccentColor}
                   attendeeCount={getAttendeeCount(mc.id)}
                   onSelect={setSelectedMasterclass}
+                  onEdit={openEditModal}
+                  onDelete={setDeleteConfirmMasterclass}
                   getBadgeStyles={getBadgeStyles}
                   getInitials={getInitials}
                 />
@@ -653,6 +747,8 @@ export default function MasterclassesPageClient({
                       brandAccentColor={brandAccentColor}
                       attendeeCount={getAttendeeCount(mc.id)}
                       onSelect={setSelectedMasterclass}
+                      onEdit={openEditModal}
+                      onDelete={setDeleteConfirmMasterclass}
                       getBadgeStyles={getBadgeStyles}
                       getInitials={getInitials}
                     />
@@ -715,14 +811,7 @@ export default function MasterclassesPageClient({
                     className="absolute top-4 right-14 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-gray-900 flex items-center justify-center shadow-md transition-colors"
                     onClick={(e) => {
                       e.stopPropagation()
-                      setEditTitle(selectedMasterclass.title)
-                      setEditDescription(selectedMasterclass.description)
-                      setEditTopics(selectedMasterclass.topics.join("\n"))
-                      setEditWhoItsFor(selectedMasterclass.whoItsFor ?? "")
-                      setEditVideoUrl(selectedMasterclass.videoUrl ?? "")
-                      setEditImagePath(selectedMasterclass.imagePath)
-                      setEditError(null)
-                      setEditModalOpen(true)
+                      openEditModal(selectedMasterclass)
                     }}
                   >
                     <Pencil className="w-5 h-5" />
@@ -748,12 +837,12 @@ export default function MasterclassesPageClient({
                       <div>
                         <p className="font-medium text-gray-900">{selectedMasterclass.hostName}</p>
                         {selectedMasterclass.scheduledAt ? (
-                          <div className="text-sm text-gray-500 mt-1">
+                          <div className="text-sm text-gray-500 mt-1 break-words">
                             <span className="font-semibold text-gray-900">
-                              {format(new Date(selectedMasterclass.scheduledAt), "EEE, MMM d")}
+                              {formatMasterclassDate(selectedMasterclass.scheduledAt)}
                             </span>
                             {" · "}
-                            {formatDualTimezone(selectedMasterclass.scheduledAt)}
+                            {formatMasterclassDualTimezone(selectedMasterclass.scheduledAt)}
                             {" · "}
                             {selectedMasterclass.duration}
                           </div>
@@ -807,7 +896,9 @@ export default function MasterclassesPageClient({
                             type="button"
                             onClick={() => {
                               if (!selectedMasterclass.scheduledAt) return
-                              const start = new Date(selectedMasterclass.scheduledAt)
+                              const start =
+                                parseMasterclassScheduledAt(selectedMasterclass.scheduledAt) ??
+                                new Date(selectedMasterclass.scheduledAt)
                               const mins = selectedMasterclass.duration ? parseInt(selectedMasterclass.duration, 10) || 60 : 60
                               const end = new Date(start.getTime() + mins * 60 * 1000)
                               const fmt = (d: Date) =>
@@ -1037,7 +1128,13 @@ export default function MasterclassesPageClient({
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
             <div className="bg-white rounded-lg p-6 w-full max-w-md pointer-events-auto">
               <h3 className="text-lg font-semibold mb-4">
-                Events on {format(new Date(selectedDateEvents[0].scheduledAt!), "MMMM d, yyyy")}
+                Events on{" "}
+                {parseMasterclassScheduledAt(selectedDateEvents[0].scheduledAt!)?.toLocaleDateString("en-US", {
+                  timeZone: "America/Los_Angeles",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </h3>
 
               <div className="space-y-2">
@@ -1052,8 +1149,8 @@ export default function MasterclassesPageClient({
                     className="block w-full text-left px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 transition"
                   >
                     <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">
-                      {format(new Date(event.scheduledAt!), "h:mm a")}
+                    <div className="text-xs text-gray-500 break-words">
+                      {formatMasterclassDualTimezone(event.scheduledAt!)}
                     </div>
                   </button>
                 ))}
@@ -1109,11 +1206,15 @@ export default function MasterclassesPageClient({
                 .split("\n")
                 .map((t) => t.trim())
                 .filter(Boolean)
-              if (!scheduleDate || !scheduleTime) {
-                alert("Please enter date and time.")
+              if (!scheduleTitle.trim()) {
+                toast.error("Please enter a title.")
                 return
               }
-              const scheduledAtISO = `${scheduleDate}T${scheduleTime}:00`
+              if (!scheduleDate || !scheduleTime) {
+                toast.error("Please enter date and time.")
+                return
+              }
+              const scheduledAtISO = buildMasterclassScheduledAtIso(scheduleDate, scheduleTime)
               const result = await createMasterclass({
                 title: scheduleTitle,
                 description: scheduleDescription || null,
@@ -1125,10 +1226,11 @@ export default function MasterclassesPageClient({
                 video_url: scheduleVideoUrl || null,
               })
               if (!result.success) {
-                alert(result.error)
+                toast.error(result.error)
                 return
               }
               setScheduleModalOpen(false)
+              toast.success("Masterclass submitted for approval")
               router.refresh()
             }}
           >
@@ -1255,7 +1357,7 @@ export default function MasterclassesPageClient({
                 </div>
                 <div>
                   <Label htmlFor="schedule-time" className="text-sm font-medium text-gray-700">
-                    Time
+                    Time (Pacific)
                   </Label>
                   <Input
                     id="schedule-time"
@@ -1312,7 +1414,10 @@ export default function MasterclassesPageClient({
         open={editModalOpen}
         onOpenChange={(open) => {
           setEditModalOpen(open)
-          if (!open) setEditError(null)
+          if (!open) {
+            setEditError(null)
+            setEditingMasterclass(null)
+          }
         }}
       >
         <DialogContent
@@ -1322,32 +1427,43 @@ export default function MasterclassesPageClient({
           <div className="px-6 pt-6 pb-4 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Edit Masterclass</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Update your masterclass content. Date, time, and duration cannot be changed here.
+              Update your masterclass details before it goes live.
             </p>
           </div>
           <form
             className="flex-1 overflow-y-auto"
             onSubmit={(e) => {
               e.preventDefault()
-              if (!selectedMasterclass) return
+              if (!editingMasterclass) return
               setEditError(null)
+
+              if (!editDate || !editTime) {
+                setEditError("Date and time are required.")
+                return
+              }
+
               startTransition(async () => {
                 const topicsArr = editTopics
                   .split("\n")
                   .map((t) => t.trim())
                   .filter(Boolean)
+                const scheduledAtISO = buildMasterclassScheduledAtIso(editDate, editTime)
                 const result = await updateMasterclass({
-                  id: selectedMasterclass.id,
+                  id: editingMasterclass.id,
                   title: editTitle.trim(),
                   description: editDescription.trim() || null,
                   topics: topicsArr.length > 0 ? topicsArr : null,
                   who_its_for: editWhoItsFor.trim() || null,
                   video_url: editVideoUrl.trim() || null,
                   image_path: editImagePath,
+                  scheduled_at: scheduledAtISO,
+                  duration_minutes: editDuration,
                 })
                 if (result.success) {
                   setEditModalOpen(false)
+                  setEditingMasterclass(null)
                   setSelectedMasterclass(null)
+                  toast.success("Masterclass updated")
                   router.refresh()
                 } else {
                   setEditError(result.error ?? "Failed to save changes")
@@ -1395,12 +1511,12 @@ export default function MasterclassesPageClient({
                   className="mt-1.5 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 disabled:opacity-50"
                   onChange={async (e) => {
                     const file = e.target.files?.[0]
-                    if (!file || !selectedMasterclass) return
+                    if (!file || !editingMasterclass) return
                     setEditImageUploading(true)
                     try {
                       const supabase = getSupabaseBrowserClient()
                       if (!supabase) throw new Error("Supabase not available")
-                      const path = `${selectedMasterclass.id}/${file.name}`
+                      const path = `${editingMasterclass.id}/${file.name}`
                       const { error } = await supabase.storage
                         .from("masterclasses")
                         .upload(path, file, { upsert: true, contentType: file.type })
@@ -1471,6 +1587,52 @@ export default function MasterclassesPageClient({
                   className="mt-1.5 w-full resize-none"
                 />
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <Label htmlFor="edit-date" className="text-sm font-medium text-gray-700">
+                    Date
+                  </Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="mt-1.5 w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-time" className="text-sm font-medium text-gray-700">
+                    Time (Pacific)
+                  </Label>
+                  <Input
+                    id="edit-time"
+                    type="time"
+                    value={editTime}
+                    onChange={(e) => setEditTime(e.target.value)}
+                    className="mt-1.5 w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-duration" className="text-sm font-medium text-gray-700">
+                    Duration (minutes)
+                  </Label>
+                  <select
+                    id="edit-duration"
+                    value={editDuration}
+                    onChange={(e) => setEditDuration(Number(e.target.value))}
+                    className="mt-1.5 w-full h-9 rounded-md border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    required
+                  >
+                    {DURATION_OPTIONS.map((d) => (
+                      <option key={d} value={d}>
+                        {d} min
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div>
                 <Label htmlFor="edit-video" className="text-sm font-medium text-gray-700">
                   Video URL (Optional)
@@ -1493,6 +1655,35 @@ export default function MasterclassesPageClient({
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!deleteConfirmMasterclass}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDeleteConfirmMasterclass(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete masterclass?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this masterclass? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+              onClick={(e) => {
+                e.preventDefault()
+                void handleDeleteMasterclass()
+              }}
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Past Masterclasses Modal */}
       <Dialog open={isPastOpen} onOpenChange={setIsPastOpen}>

@@ -1,10 +1,23 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { getRequestOrigin } from "@/lib/auth/get-request-origin"
+import { sanitizeNextPath } from "@/lib/auth/sanitize-next-path"
+import {
+  readAuthNextCookie,
+  readAuthRegCookie,
+  clearAuthFlowCookies,
+  AUTH_NEXT_COOKIE,
+  AUTH_PID_COOKIE,
+  AUTH_NTP_COOKIE,
+} from "@/lib/auth/auth-cookies"
+import { createRouteHandlerClient, copyResponseCookies } from "@/lib/auth/create-route-handler-client"
+import { ensureOAuthUserProfile } from "@/lib/auth/ensure-oauth-profile"
 
-async function triggerGHLWebhookIfNewUser(user: any, serviceClient: any) {
-  console.log("[GHL DEBUG] Trigger function started")
-
+async function triggerGHLWebhookIfNewUser(
+  user: { id: string; email?: string; user_metadata?: Record<string, unknown> },
+  serviceClient: SupabaseClient,
+) {
   let profile = null
 
   for (let i = 0; i < 5; i++) {
@@ -22,18 +35,13 @@ async function triggerGHLWebhookIfNewUser(user: any, serviceClient: any) {
     await new Promise((res) => setTimeout(res, 500))
   }
 
-  console.log("[GHL DEBUG] profile:", profile)
-
   if (!profile?.plan_id || !profile?.created_at) {
-    console.log("[GHL] Profile not ready, skipping webhook")
+    console.log("[auth/callback] GHL: profile not ready, skipping webhook")
     return
   }
 
   const createdAt = new Date(profile.created_at).getTime()
-  const now = Date.now()
-  const isNewUser = now - createdAt < 15 * 60 * 1000
-
-  console.log("[GHL DEBUG] isNewUser:", isNewUser)
+  const isNewUser = Date.now() - createdAt < 15 * 60 * 1000
 
   if (!isNewUser) return
 
@@ -44,61 +52,93 @@ async function triggerGHLWebhookIfNewUser(user: any, serviceClient: any) {
     .single()
 
   const webhookUrl = plan?.ghl_webhook_url
-
-  console.log("[GHL DEBUG] webhookUrl:", webhookUrl)
-
   if (!webhookUrl) return
 
   const metadata = user.user_metadata || {}
-
-  const fullName = metadata.full_name || metadata.name || ""
+  const fullName = (metadata.full_name as string) || (metadata.name as string) || ""
   const nameParts = fullName.split(" ")
-
-  const firstName =
-    metadata.first_name ||
-    metadata.given_name ||
-    nameParts[0] ||
-    ""
-
-  const lastName =
-    metadata.last_name ||
-    metadata.family_name ||
-    nameParts.slice(1).join(" ") ||
-    ""
 
   await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       email: user.email,
-      first_name: firstName,
-      last_name: lastName,
+      first_name: (metadata.first_name as string) || (metadata.given_name as string) || nameParts[0] || "",
+      last_name: (metadata.last_name as string) || (metadata.family_name as string) || nameParts.slice(1).join(" ") || "",
     }),
   })
 
-  console.log("[GHL] Webhook sent successfully")
+  console.log("[auth/callback] GHL webhook sent")
 }
 
-export async function GET(request: Request) {
-  console.log("[GHL DEBUG] CALLBACK ROUTE HIT")
-  const { searchParams } = new URL(request.url)
+export async function GET(request: NextRequest) {
+  const origin = getRequestOrigin(request)
+  const { searchParams } = request.nextUrl
+  const debug = searchParams.get("debug") === "1"
 
   const code = searchParams.get("code")
-  const pid = searchParams.get("pid")
-  const ntp = searchParams.get("ntp")
+  const oauthError = searchParams.get("error")
+  const oauthErrorDescription = searchParams.get("error_description")
 
-  const supabase = await createClient()
+  const rawAuthNextCookie = request.cookies.get(AUTH_NEXT_COOKIE)?.value ?? null
+  const legacyNextQuery = searchParams.get("next")
+  const nextPath = legacyNextQuery
+    ? sanitizeNextPath(legacyNextQuery)
+    : readAuthNextCookie(request)
 
-  if (code) {
-    await supabase.auth.exchangeCodeForSession(code)
+  const pid = searchParams.get("pid") ?? readAuthRegCookie(request, AUTH_PID_COOKIE)
+  const ntp = searchParams.get("ntp") ?? readAuthRegCookie(request, AUTH_NTP_COOKIE)
+
+  console.log("[auth/callback]", {
+    hasCode: !!code,
+    origin,
+    rawAuthNextCookie,
+    legacyNextQuery,
+    nextPath,
+    pid: pid ?? null,
+    ntp: ntp ?? null,
+    oauthError: oauthError ?? null,
+    debug,
+  })
+
+  if (oauthError) {
+    console.error("[auth/callback] OAuth provider error:", oauthError, oauthErrorDescription ?? "")
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  }
+
+  if (!code) {
+    console.warn("[auth/callback] Missing authorization code — Supabase may have rejected redirectTo or used Site URL")
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  }
+
+  // Exchange code and attach session cookies to this response.
+  const sessionRedirect = NextResponse.redirect(`${origin}${nextPath}`)
+  const supabase = createRouteHandlerClient(request, sessionRedirect)
+
+  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+
+  if (exchangeError) {
+    console.error("[auth/callback] exchangeCodeForSession failed:", exchangeError.message)
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const sessionCookieNames = sessionRedirect.cookies.getAll().map((c) => c.name)
+
+  console.log("[auth/callback] after exchange:", {
+    exchangeOk: true,
+    userId: user?.id ?? null,
+    sessionCookieCount: sessionCookieNames.length,
+    sessionCookieNames,
+    nextPath,
+  })
+
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url))
+    console.warn("[auth/callback] No user after code exchange — session cookies may not have been set")
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
   }
 
   const serviceClient = createServerClient(
@@ -109,20 +149,19 @@ export async function GET(request: Request) {
         getAll: () => [],
         setAll: () => {},
       },
-    }
+    },
   )
+
+  const planToAssign = pid ?? null
+  await ensureOAuthUserProfile(user, serviceClient, planToAssign)
+
+  let finalRedirectUrl = `${origin}${nextPath}`
 
   // NTP FLOW (Temporary Plan → Stripe → Return to Login)
   if (ntp && pid) {
-    // Assign temporary plan first
-    await serviceClient
-      .from("profiles")
-      .update({ plan_id: ntp })
-      .eq("id", user.id)
-
+    await serviceClient.from("profiles").update({ plan_id: ntp }).eq("id", user.id)
     await triggerGHLWebhookIfNewUser(user, serviceClient)
 
-    // Fetch Stripe payment link
     const { data: plan } = await serviceClient
       .from("plans")
       .select("stripe_payment_link")
@@ -130,19 +169,37 @@ export async function GET(request: Request) {
       .single()
 
     if (plan?.stripe_payment_link) {
-      return NextResponse.redirect(plan.stripe_payment_link)
+      finalRedirectUrl = plan.stripe_payment_link
+      console.log("[auth/callback] Redirecting to Stripe payment link")
     }
-  }
-
-  // Direct PID assignment (no Stripe required)
-  if (pid) {
-    await serviceClient
-      .from("profiles")
-      .update({ plan_id: pid })
-      .eq("id", user.id)
-
+  } else if (pid) {
+    await serviceClient.from("profiles").update({ plan_id: pid }).eq("id", user.id)
+    await triggerGHLWebhookIfNewUser(user, serviceClient)
+  } else {
     await triggerGHLWebhookIfNewUser(user, serviceClient)
   }
 
-  return NextResponse.redirect(new URL("/members/dashboard", request.url))
+  let finalResponse = NextResponse.redirect(finalRedirectUrl)
+  copyResponseCookies(sessionRedirect, finalResponse)
+  clearAuthFlowCookies(finalResponse)
+
+  console.log("[auth/callback] success:", {
+    userId: user.id,
+    finalRedirectUrl,
+    rawAuthNextCookie,
+    nextPath,
+  })
+
+  if (debug) {
+    finalResponse.headers.set(
+      "X-Auth-Debug",
+      JSON.stringify({
+        userId: user.id,
+        nextPath,
+        sessionCookieCount: sessionCookieNames.length,
+      }),
+    )
+  }
+
+  return finalResponse
 }

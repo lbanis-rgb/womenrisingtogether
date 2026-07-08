@@ -184,6 +184,7 @@ function migrateRawSections(
         hero_text: rawContent.hero_text ?? rawContent.subheadline ?? "",
         hero_image: rawContent.hero_image ?? rawContent.background_image ?? "",
         primary_button_anchor: rawContent.primary_button_anchor ?? rawContent.primary_button_url ?? "#membership-plans",
+        custom_button_url: rawContent.custom_button_url ?? rawContent.customButtonUrl ?? "",
         backgroundImage: rawContent.backgroundImage === true || rawContent.backgroundImage === "true",
       }
     }

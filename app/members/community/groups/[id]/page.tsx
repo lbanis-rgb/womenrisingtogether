@@ -33,6 +33,8 @@ import { updateGroup } from "@/actions/groups/update-group"
 import { uploadGroupAvatar } from "@/actions/groups/upload-group-avatar"
 import { uploadGroupHeaderImage } from "@/actions/groups/upload-group-header-image"
 import type { FeedPost, FeedReply } from "@/lib/types/community"
+import { LinkAttachmentCard } from "@/components/community/link-attachment-card"
+import { canManageGroup, isGroupModeratorRole } from "@/lib/community/groups/can-manage-group"
 
 interface GroupEvent {
   id: string
@@ -496,42 +498,11 @@ export default function GroupDetailPage() {
   const pinnedPost = posts.find((p) => (p as FeedPost & { is_pinned?: boolean }).is_pinned)
   const regularPosts = posts.filter((p) => !(p as FeedPost & { is_pinned?: boolean }).is_pinned)
 
-  // Use a ref for the file input to trigger uploads
-  const groupAvatarInputRef = useRef<HTMLInputElement>(null)
-  const handleGroupAvatarClick = () => {
-    groupAvatarInputRef.current?.click()
-  }
 
   const avatarFormRef = useRef<HTMLFormElement>(null)
   const avatarFileInputRef = useRef<HTMLInputElement>(null)
   const headerFormRef = useRef<HTMLFormElement>(null)
   const headerFileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleGroupAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file || !groupId) return
-
-    const formData = new FormData()
-    formData.append("avatar", file)
-
-    const result = await uploadGroupAvatar(groupId, formData)
-
-    if (result.success) {
-      // Update group state with new avatar URL
-      setGroup((prevGroup) =>
-        prevGroup
-          ? {
-              ...prevGroup,
-              avatar_url: result.avatarUrl,
-            }
-          : null,
-      )
-      // Reset the input value to allow uploading the same file again if needed
-      event.target.value = ""
-    } else {
-      alert(result.error || "Failed to upload avatar")
-    }
-  }
 
   const handleCloseEventModal = () => {
     setEventModalOpen(false)
@@ -862,6 +833,7 @@ export default function GroupDetailPage() {
 
   const isOwner = !!(group && currentUser && group.created_by === currentUser.id)
   const isAdmin = userRole === "admin"
+  const canManageGroupAccess = canManageGroup(userRole)
   const canSendGroupMessage =
     isGroupOwner ||
     isOwner ||
@@ -869,6 +841,16 @@ export default function GroupDetailPage() {
     userRole === "moderator" ||
     userRole === "owner" ||
     isPlatformStaff
+
+  useEffect(() => {
+    if (!groupId || !currentUser) return
+    console.info("[group-edit-permissions]", {
+      groupId,
+      currentUserId: currentUser.id,
+      membershipRole: userRole,
+      canManageGroup: canManageGroupAccess,
+    })
+  }, [groupId, currentUser, userRole, canManageGroupAccess])
 
   // Helper to check if user can delete a post
   const canDeletePost = (post: FeedPost) => {
@@ -1559,7 +1541,7 @@ export default function GroupDetailPage() {
             <div className="absolute inset-0 bg-black/40" />
           </>
         )}
-        {(isOwner || isAdmin) && (
+        {canManageGroupAccess && (
           <form ref={headerFormRef} action={uploadGroupHeaderImage} className="absolute top-4 right-4 z-10">
             <input type="hidden" name="groupId" value={groupId} />
             <input
@@ -1582,11 +1564,13 @@ export default function GroupDetailPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-            {/* CHANGE: Wrapped avatar in relative container for upload overlay */}
             <div className="relative">
               <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
-                onClick={handleGroupAvatarClick}
+                className={cx(
+                  "w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold overflow-hidden",
+                  canManageGroupAccess && "cursor-pointer hover:opacity-90 transition-opacity",
+                )}
+                onClick={canManageGroupAccess ? () => avatarFileInputRef.current?.click() : undefined}
               >
                 {group?.avatar_url ? (
                   <img
@@ -1604,17 +1588,8 @@ export default function GroupDetailPage() {
                       .slice(0, 2) || "G"}
                   </span>
                 )}
-                {/* Avatar Upload Input (hidden) */}
-                <input
-                  type="file"
-                  ref={groupAvatarInputRef}
-                  accept="image/*"
-                  onChange={handleGroupAvatarUpload}
-                  className="hidden"
-                />
               </div>
-              {/* CHANGE: Added avatar upload overlay for owners/moderators */}
-              {(isOwner || isAdmin) && (
+              {canManageGroupAccess && (
                 <form ref={avatarFormRef} action={uploadGroupAvatar}>
                   <input type="hidden" name="groupId" value={groupId} />
                   <input
@@ -1908,14 +1883,7 @@ export default function GroupDetailPage() {
                           placeholder="https://example.com"
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
                         />
-                        {linkUrl && (
-                          <div className="mt-3 flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                            <div className="w-10 h-12 bg-blue-100 rounded flex items-center justify-center">
-                              <i className="fa-solid fa-link text-blue-600" />
-                            </div>
-                            <span className="text-sm text-gray-700 font-medium truncate">{linkUrl}</span>
-                          </div>
-                        )}
+                        {linkUrl && <LinkAttachmentCard url={linkUrl} className="mt-3" />}
                       </div>
                     )}
 
@@ -2083,7 +2051,7 @@ export default function GroupDetailPage() {
                           displayName={pinnedPost.author?.name || "Unknown User"}
                           avatarUrl={pinnedPost.author?.avatar_url}
                         />
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2 mb-2">
                             <h3 className="font-semibold text-gray-900">
                               {pinnedPost.author?.name || "Unknown User"}
@@ -2113,7 +2081,7 @@ export default function GroupDetailPage() {
 
                   {pinnedPost && !showFeaturedOnly && expandedPinnedPostId === pinnedPost.id && (
                     <div className="mt-6">
-                      <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <article className="min-w-0 max-w-full overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                         {posts
                           .filter((p) => p.id === pinnedPost.id)
                           .map((fullPost) => (
@@ -2128,7 +2096,7 @@ export default function GroupDetailPage() {
                                   displayName={fullPost.author?.name || "Unknown User"}
                                   avatarUrl={fullPost.author?.avatar_url}
                                 />
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center space-x-2 mb-2">
                                     <h3 className="font-semibold text-gray-900">{fullPost.author?.name || "Unknown User"}</h3>
                                     <span className="text-gray-500">-</span>
@@ -2166,21 +2134,7 @@ export default function GroupDetailPage() {
                                     </div>
                                   )}
 
-                                  {fullPost.link_url && (
-                                    <div className="mb-4 flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                                      <div className="w-10 h-12 bg-blue-100 rounded flex items-center justify-center">
-                                        <i className="fa-solid fa-link text-blue-600" />
-                                      </div>
-                                      <a
-                                        href={fullPost.link_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm text-blue-600 hover:text-blue-800 font-medium truncate"
-                                      >
-                                        {fullPost.link_url}
-                                      </a>
-                                    </div>
-                                  )}
+                                  {fullPost.link_url && <LinkAttachmentCard url={fullPost.link_url} className="mb-4" />}
 
                                   {fullPost.video_url &&
                                     (() => {
@@ -2399,7 +2353,7 @@ export default function GroupDetailPage() {
                   <article
                     id={`post-${post.id}`}
                     key={post.id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+                    className="min-w-0 max-w-full overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
                   >
                     {(post as FeedPost & { is_featured?: boolean }).is_featured && (
                       <div className="mb-2 inline-block text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
@@ -2411,7 +2365,7 @@ export default function GroupDetailPage() {
                         displayName={post.author?.name || "Unknown User"}
                         avatarUrl={post.author?.avatar_url}
                       />
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-2">
                           <h3 className="font-semibold text-gray-900">{post.author?.name || "Unknown User"}</h3>
                           <span className="text-gray-500">-</span>
@@ -2451,22 +2405,7 @@ export default function GroupDetailPage() {
                           </div>
                         )}
 
-                        {/* Link attachment */}
-                        {post.link_url && (
-                          <div className="mb-4 flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                            <div className="w-10 h-12 bg-blue-100 rounded flex items-center justify-center">
-                              <i className="fa-solid fa-link text-blue-600" />
-                            </div>
-                            <a
-                              href={post.link_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:text-blue-800 font-medium truncate"
-                            >
-                              {post.link_url}
-                            </a>
-                          </div>
-                        )}
+                        {post.link_url && <LinkAttachmentCard url={post.link_url} className="mb-4" />}
 
                         {post.video_url &&
                           (() => {
@@ -2697,7 +2636,7 @@ export default function GroupDetailPage() {
 
           {/* Right Column - Members */}
           <div className="w-full lg:w-[300px] flex-shrink-0 space-y-6">
-            {(isOwner || isAdmin) && (
+            {canManageGroupAccess && (
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowEditGroupModal(true)}
@@ -2731,7 +2670,7 @@ export default function GroupDetailPage() {
                     .join("")
                     .toUpperCase()
                     .slice(0, 2)
-                  const isModerator = ["admin", "moderator"].includes(member.role)
+                  const isModerator = isGroupModeratorRole(member.role)
                   const roleText = isModerator
                     ? "Group Moderator"
                     : `Member since ${new Date(member.joined_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`

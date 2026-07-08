@@ -111,6 +111,7 @@ const DEFAULT_NAV_ITEMS: NavigationItem[] = [
   { id: "productsservices", label: "Products & Services", visible: true, order: 6 },
   { id: "education", label: "Education", visible: true, order: 7 },
   { id: "support", label: "Support", visible: true, order: 8 },
+  { id: "aimentors", label: "AI Mentors", visible: true, order: 9 },
 ]
 
 interface SiteSettingsRowFromDb {
@@ -404,6 +405,24 @@ export default function AdminSettingsPage() {
           {
             id: "masterclasses",
             label: "Masterclasses",
+            visible: true,
+            order: maxOrder + 1,
+          },
+        ]
+      }
+
+      // Ensure "aimentors" exists
+      const hasAimentors = loadedNavItems.some((item) => item.id === "aimentors")
+      if (!hasAimentors) {
+        const maxOrder =
+          loadedNavItems.length > 0
+            ? Math.max(...loadedNavItems.map((item) => item.order))
+            : 0
+        loadedNavItems = [
+          ...loadedNavItems,
+          {
+            id: "aimentors",
+            label: "AI Mentors",
             visible: true,
             order: maxOrder + 1,
           },

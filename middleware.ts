@@ -1,19 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
+/**
+ * Public auth/recovery routes (never force-redirect away in middleware):
+ * /auth/callback, /auth/update-password, /reset-password,
+ * /login, /reg, /register, /forgot-password
+ *
+ * /members/* protection is handled in app/members/layout.tsx.
+ */
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
 
-  // Read env vars but DON'T throw if missing in preview
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("Supabase env vars missing in middleware — skipping Supabase auth refresh.")
+    console.warn("[middleware] Supabase env vars missing — skipping session refresh.")
     return response
   }
 
@@ -30,8 +38,27 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // Just refresh session; do NOT redirect on missing user
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (pathname === "/auth/callback") {
+    console.log("[middleware] /auth/callback request — session refresh only, no redirect")
+  }
+
+  if (pathname === "/reset-password" || pathname === "/forgot-password") {
+    console.log("[middleware] public reset route — no redirect:", pathname)
+  }
+
+  if (pathname.startsWith("/members") && !user) {
+    console.warn("[middleware] No session on members route:", pathname, {
+      cookieNames: request.cookies.getAll().map((c) => c.name),
+    })
+  }
+
+  if (pathname === "/members/dashboard" && user) {
+    console.log("[middleware] Session present on /members/dashboard:", { userId: user.id })
+  }
 
   return response
 }

@@ -1,5 +1,6 @@
 import LoginForm from "./login-form"
 import { createClient } from "@/lib/supabase/server"
+import { Suspense } from "react"
 
 export default async function LoginPage() {
   const supabase = await createClient()
@@ -12,5 +13,9 @@ export default async function LoginPage() {
 
   const enableGoogleAuth = settings?.enable_google_auth ?? false
 
-  return <LoginForm enableGoogleAuth={enableGoogleAuth} />
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <LoginForm enableGoogleAuth={enableGoogleAuth} />
+    </Suspense>
+  )
 }

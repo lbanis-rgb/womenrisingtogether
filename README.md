@@ -28,3 +28,17 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## AI Mentor Module integration
+
+The member page at `/members/aimentors` opens the AI Mentor Module library in a signed iframe modal. Configure these Vercel environment variables for each community site:
+
+| Variable | Purpose |
+|----------|---------|
+| `AI_MENTOR_MODULE_URL` | Base URL for the module (defaults to `https://www.aimentormodule.com`) |
+| `AI_MENTOR_MODULE_SITE_KEY` | Site key from AI Mentor Module |
+| `AI_MENTOR_MODULE_SIGNING_SECRET` | Site-specific signing secret used server-side to create short-lived launch tokens |
+
+The launch token is generated in `/api/ai-mentors/launch` and includes the member's `plans.id` values from their profile. Never expose `AI_MENTOR_MODULE_SIGNING_SECRET` to the client.
+
+Enable or customize the **AI Mentors** sidebar item under **Admin → Settings → Navigation**.

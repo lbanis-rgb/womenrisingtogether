@@ -4,6 +4,7 @@ import MasterclassTable, {
   type MasterclassRow,
   type CreatorOption,
 } from "@/components/admin/masterclasses/MasterclassTable"
+import { formatMasterclassScheduledAtForAdmin } from "@/lib/masterclasses/format-masterclass-time"
 
 export const dynamic = "force-dynamic"
 
@@ -32,17 +33,7 @@ function parseTopics(raw: unknown): string[] {
 }
 
 function formatScheduledAt(iso: string | null): string {
-  if (!iso) return "—"
-  const d = new Date(iso)
-  return d.toLocaleString("en-US", {
-    timeZone: "America/Los_Angeles",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
+  return formatMasterclassScheduledAtForAdmin(iso)
 }
 
 export default async function AdminMasterclassesPage() {

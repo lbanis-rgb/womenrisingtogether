@@ -19,6 +19,7 @@ import {
   getCommunityUiSettings,
 } from "./actions"
 import type { FeedPost, FeedReply } from "@/lib/types/community"
+import { LinkAttachmentCard } from "@/components/community/link-attachment-card"
 
 // simple classnames helper
 function cx(...c: Array<string | false | null | undefined>) {
@@ -867,14 +868,7 @@ export default function CommunityPage() {
                       placeholder="https://example.com/article"
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    {linkUrl && (
-                      <div className="mt-3 flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="w-10 h-12 bg-blue-100 rounded flex items-center justify-center">
-                          <i className="fa-solid fa-link text-blue-600" />
-                        </div>
-                        <span className="text-sm text-blue-600 font-medium truncate">{linkUrl}</span>
-                      </div>
-                    )}
+                    {linkUrl && <LinkAttachmentCard url={linkUrl} className="mt-3" />}
                   </div>
                 )}
 
@@ -1033,13 +1027,13 @@ export default function CommunityPage() {
               ) : (
                 <div className="space-y-4">
                   {posts.map((post) => (
-                    <div key={post.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-                      <div className="flex flex-col sm:flex-row gap-4">
+                    <div key={post.id} className="min-w-0 max-w-full overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+                      <div className="flex flex-col gap-4 sm:flex-row">
                         <ProfileAvatar
                           displayName={post.author?.name || "Unknown"}
                           avatarUrl={post.author?.avatar_url}
                         />
-                        <div className="flex-1">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between">
                             <div>
                               <h3 className="font-semibold text-gray-900">{post.author?.name || "Unknown"}</h3>
@@ -1103,21 +1097,7 @@ export default function CommunityPage() {
                             </div>
                           )}
 
-                          {post.link_url && (
-                            <div className="mt-4 flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                              <div className="w-10 h-12 bg-blue-100 rounded flex items-center justify-center">
-                                <i className="fa-solid fa-link text-blue-600" />
-                              </div>
-                              <a
-                                href={post.link_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:text-blue-800 font-medium truncate"
-                              >
-                                {post.link_url}
-                              </a>
-                            </div>
-                          )}
+                          {post.link_url && <LinkAttachmentCard url={post.link_url} className="mt-4" />}
 
                           {post.video_url &&
                             (() => {

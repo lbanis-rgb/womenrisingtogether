@@ -7,6 +7,10 @@ import type { Dashboard2Data, WeeklyItem } from "../actions"
 import { getYouTubeEmbedUrl, isYouTubeUrl } from "../utils"
 import { PLACEHOLDER_IMG } from "./utils"
 import { useShellConfig } from "../../_components/ShellConfig"
+import {
+  formatMasterclassDate,
+  formatMasterclassDualTimezone,
+} from "@/lib/masterclasses/format-masterclass-time"
 
 const CATEGORY_LABELS: Record<string, string> = {
   groups: "Groups",
@@ -316,7 +320,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   href={`/members/community/groups?group=${g.slug || g.id}`}
                   className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="relative h-40 w-full overflow-hidden rounded-t-xl">
+                  <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-slate-100">
                     <img
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                       src={(g.listing_image_url as string) || (g.avatar_url as string) || PLACEHOLDER_IMG}
@@ -345,7 +349,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   href={`/members/courses?course=${encodeURIComponent(String(c.title || c.id))}`}
                   className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="h-40 relative overflow-hidden bg-gray-900">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gray-900">
                     <img
                       className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
                       src={(c.thumbnail_url as string) || PLACEHOLDER_IMG}
@@ -374,7 +378,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   href={`/members/masterclasses`}
                   className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="h-40 relative overflow-hidden bg-gray-900">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gray-900">
                     <img
                       className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
                       src={(m.image_url as string) || "/placeholder.svg"}
@@ -387,7 +391,11 @@ export function Dashboard2Content(props: Dashboard2Data) {
                     <div className="flex items-center justify-between mt-auto pt-4">
                       <div className="flex items-center space-x-2 text-xs text-gray-500">
                         <i className="fa-regular fa-calendar" />
-                        <span>{m.scheduled_at ? new Date(String(m.scheduled_at)).toLocaleString() : ""}</span>
+                        <span>
+                          {m.scheduled_at
+                            ? `${formatMasterclassDate(String(m.scheduled_at))} · ${formatMasterclassDualTimezone(String(m.scheduled_at))}`
+                            : ""}
+                        </span>
                       </div>
                       <span
                         className="text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors hover:opacity-90"
@@ -439,7 +447,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   href={`/members/education?content=${c.slug || c.id}`}
                   className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="h-40 relative overflow-hidden bg-gray-900">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gray-900">
                     <img
                       className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
                       src={(c.image_url as string) || "/placeholder.svg"}
@@ -502,7 +510,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   href={`/members/productservices?tab=products&product=${encodeURIComponent(String(p.name || p.id))}`}
                   className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="h-40 relative overflow-hidden bg-gray-900">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gray-900">
                     <img
                       className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
                       src={(p.image_url as string) || PLACEHOLDER_IMG}
@@ -531,7 +539,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   href={`/members/productservices?tab=services&service=${encodeURIComponent(String(s.name || s.id))}`}
                   className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="h-40 relative overflow-hidden bg-gray-900">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gray-900">
                     <img
                       className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
                       src={(s.image_url as string) || PLACEHOLDER_IMG}
@@ -560,7 +568,7 @@ export function Dashboard2Content(props: Dashboard2Data) {
                   href="/members/tools"
                   className="flex flex-col h-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="h-40 relative overflow-hidden bg-gray-900">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gray-900">
                     <img
                       className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
                       src={(t.image_url as string) || PLACEHOLDER_IMG}

@@ -1,29 +1,48 @@
 "use client"
 
 import { createBrowserClient } from "@supabase/ssr"
+import { getOAuthCallbackUrl, getClientOrigin } from "@/lib/auth/auth-urls"
+import { setAuthFlowCookies } from "@/lib/auth/auth-cookies"
+import { DEFAULT_MEMBER_DESTINATION } from "@/lib/auth/sanitize-next-path"
 
-export default function GoogleAuthButton() {
+type GoogleAuthButtonProps = {
+  /** Post-auth destination (relative path). Defaults to member dashboard. */
+  next?: string
+}
+
+export default function GoogleAuthButton({ next = DEFAULT_MEMBER_DESTINATION }: GoogleAuthButtonProps) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
 
   const handleGoogleLogin = async () => {
     const currentUrl = new URL(window.location.href)
     const pid = currentUrl.searchParams.get("pid")
     const ntp = currentUrl.searchParams.get("ntp")
+    const destination =
+      currentUrl.searchParams.get("redirectTo") ||
+      currentUrl.searchParams.get("next") ||
+      next
 
-    const callbackUrl = new URL(
-      `${window.location.origin}/auth/callback`
-    )
+    const origin = getClientOrigin()
+    const redirectTo = getOAuthCallbackUrl(origin)
 
-    if (pid) callbackUrl.searchParams.set("pid", pid)
-    if (ntp) callbackUrl.searchParams.set("ntp", ntp)
+    setAuthFlowCookies({ next: destination, pid, ntp })
+
+    console.log("[Google OAuth]", {
+      origin,
+      redirectTo,
+      destination,
+      pathname: currentUrl.pathname,
+      pid: pid ?? null,
+      ntp: ntp ?? null,
+    })
 
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: callbackUrl.toString(),
+        redirectTo,
       },
     })
   }
@@ -34,11 +53,7 @@ export default function GoogleAuthButton() {
       onClick={handleGoogleLogin}
       className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white py-2.5 text-[15px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 48 48"
-        className="h-5 w-5"
-      >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
         <path
           fill="#EA4335"
           d="M24 9.5c3.54 0 6.72 1.22 9.22 3.61l6.9-6.9C35.74 2.13 30.27 0 24 0 14.6 0 6.4 5.48 2.56 13.44l8.03 6.24C12.64 13.22 17.84 9.5 24 9.5z"

@@ -4,10 +4,37 @@ import { useState, useEffect, type ReactNode } from "react"
 import type { SalesPageSection, EducationSectionResolvedData, PlanForMembershipSection } from "@/app/admin/sales-pages/builder/sales-pages-actions"
 import { getEducationSectionResolvedData, getPlansByIdsForSection } from "@/app/admin/sales-pages/builder/sales-pages-actions"
 import { TextBlock } from "@/components/sales-page/TextBlock"
+import {
+  isExternalHeroButtonHref,
+  resolveHeroButtonHref,
+} from "@/lib/sales-pages/hero-button"
 
 function getContentValue(c: Record<string, unknown> | undefined, key: string): string {
   const v = c?.[key]
   return typeof v === "string" ? v : ""
+}
+
+function HeroPrimaryButton({
+  buttonText,
+  href,
+  accentColor,
+}: {
+  buttonText: string
+  href: string
+  accentColor: string
+}) {
+  const external = isExternalHeroButtonHref(href)
+  return (
+    <a
+      href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      className="inline-block px-6 py-3 rounded-full bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 hover:shadow-md transition"
+      style={accentColor !== "#2563eb" ? { backgroundColor: accentColor } : undefined}
+    >
+      {buttonText}
+    </a>
+  )
 }
 
 /** Wide container for the featured top plan when exactly four plans are shown. */
@@ -388,7 +415,8 @@ export function SalesSectionRenderer({
     const embedVideo = videoUrl ? getYouTubeEmbedUrl(videoUrl) : null
     const buttonText = getContentValue(c, "primary_button_text")
     const buttonAnchor = getContentValue(c, "primary_button_anchor") || getContentValue(c, "primary_button_link") || "#membership-plans"
-    const href = buttonAnchor.startsWith("#") ? buttonAnchor : buttonAnchor.startsWith("http") ? buttonAnchor : `#${buttonAnchor}`
+    const customButtonUrl = getContentValue(c, "custom_button_url") || getContentValue(c, "customButtonUrl")
+    const href = resolveHeroButtonHref(buttonAnchor, customButtonUrl)
     const backgroundImage = c.backgroundImage === true || c.backgroundImage === "true"
 
     if (backgroundImage && (heroImage || videoUrl)) {
@@ -433,16 +461,8 @@ export function SalesSectionRenderer({
               <TextBlock text={heroText} className="text-white/90" />
             </div>
           )}
-            {buttonText && (
-              <a
-                href={href}
-                target={href.startsWith("http") ? "_blank" : undefined}
-                rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
-                className="inline-block px-6 py-3 rounded-full bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 hover:shadow-md transition"
-                style={accentColor !== "#2563eb" ? { backgroundColor: accentColor } : undefined}
-              >
-                {buttonText}
-              </a>
+            {buttonText && href && (
+              <HeroPrimaryButton buttonText={buttonText} href={href} accentColor={accentColor} />
             )}
           </div>
         </section>
@@ -463,16 +483,8 @@ export function SalesSectionRenderer({
                 <TextBlock text={heroText} className="text-slate-600" />
               </div>
             )}
-            {buttonText && (
-              <a
-                href={href}
-                target={href.startsWith("http") ? "_blank" : undefined}
-                rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
-                className="inline-block px-6 py-3 rounded-full bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 hover:shadow-md transition"
-                style={accentColor !== "#2563eb" ? { backgroundColor: accentColor } : undefined}
-              >
-                {buttonText}
-              </a>
+            {buttonText && href && (
+              <HeroPrimaryButton buttonText={buttonText} href={href} accentColor={accentColor} />
             )}
           </div>
           <div>

@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import MasterclassesPageClient from "./masterclasses-page-client"
 import { getUserMasterclassPermissions } from "./can-user-create-masterclass"
+import {
+  formatMasterclassDate,
+  formatMasterclassDualTimezone,
+  parseMasterclassScheduledAt,
+} from "@/lib/masterclasses/format-masterclass-time"
 
 export const dynamic = "force-dynamic"
 
@@ -17,6 +22,7 @@ export type MasterclassForUI = {
   time: string
   scheduledAt: string | null
   duration: string
+  durationMinutes: number | null
   status: MasterclassStatus
   badge: MasterclassBadge
   image: string
@@ -37,16 +43,12 @@ function getImageUrl(imagePath: string | null): string {
   return `${base}/storage/v1/object/public/masterclasses/${imagePath}`
 }
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+function formatDate(iso: string): string {
+  return formatMasterclassDate(iso)
 }
 
-function formatTime(d: Date): string {
-  return d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  })
+function formatTime(iso: string): string {
+  return formatMasterclassDualTimezone(iso)
 }
 
 function parseTopics(raw: unknown): string[] {
@@ -151,7 +153,7 @@ export default async function MasterclassesPage() {
         : `${process.env.NEXT_PUBLIC_SUPABASE_URL || ""}/storage/v1/object/public/profiles/${creator.avatar_url}`)
       : "/placeholder.svg?height=64&width=64&text=" + hostName.slice(0, 2).toUpperCase()
 
-    const scheduledAt = row.scheduled_at ? new Date(row.scheduled_at) : null
+    const scheduledAt = row.scheduled_at ? parseMasterclassScheduledAt(row.scheduled_at) : null
     const endsAt = row.ends_at ? new Date(row.ends_at) : null
 
     let status: MasterclassStatus = "upcoming"
@@ -168,10 +170,11 @@ export default async function MasterclassesPage() {
       description: row.description ?? "",
       hostName,
       hostAvatar,
-      date: scheduledAt ? formatDate(scheduledAt) : "",
-      time: scheduledAt ? formatTime(scheduledAt) : "",
+      date: row.scheduled_at ? formatDate(row.scheduled_at) : "",
+      time: row.scheduled_at ? formatTime(row.scheduled_at) : "",
       scheduledAt: row.scheduled_at ?? null,
       duration: row.duration_minutes ? `${row.duration_minutes} min` : "",
+      durationMinutes: row.duration_minutes ?? null,
       status,
       badge,
       image: getImageUrl(row.image_path),

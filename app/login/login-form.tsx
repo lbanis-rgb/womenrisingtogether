@@ -8,6 +8,7 @@ import Image from "next/image"
 import { createClient } from "@/lib/supabase/browser"
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton"
 import { templatePageTitle } from "@/lib/template-page-title"
+import { DEFAULT_MEMBER_DESTINATION } from "@/lib/auth/sanitize-next-path"
 
 interface FormErrors {
   email?: string
@@ -80,6 +81,9 @@ export default function LoginForm({ enableGoogleAuth }: { enableGoogleAuth: bool
   const [toast, setToast] = useState<string | null>(null)
   const [suspensionError, setSuspensionError] = useState<SuspensionError | null>(null)
   const brandLogoUrl = process.env.NEXT_PUBLIC_BRAND_LOGO_URL
+  const authCallbackError = searchParams.get("error")
+  const passwordResetSuccess = searchParams.get("password_reset") === "success"
+  const postLoginDestination = searchParams.get("redirectTo") || DEFAULT_MEMBER_DESTINATION
 
   const validate = (): FormErrors => {
     const newErrors: FormErrors = {}
@@ -200,7 +204,7 @@ export default function LoginForm({ enableGoogleAuth }: { enableGoogleAuth: bool
         method: "POST",
       })
 
-      router.push("/members/dashboard")
+      router.push(postLoginDestination)
     } catch (err: any) {
       console.error("[login] error:", err)
       setErrors({ general: "login_failed" })
@@ -235,7 +239,7 @@ export default function LoginForm({ enableGoogleAuth }: { enableGoogleAuth: bool
           <form onSubmit={handleSubmit} className="mt-6 space-y-3" noValidate>
             {enableGoogleAuth && (
               <>
-                <GoogleAuthButton />
+                <GoogleAuthButton next={postLoginDestination} />
                 <div className="flex items-center my-4">
                   <div className="flex-grow border-t border-slate-200" />
                   <span className="mx-3 text-xs text-slate-400 uppercase tracking-wide">
@@ -244,6 +248,18 @@ export default function LoginForm({ enableGoogleAuth }: { enableGoogleAuth: bool
                   <div className="flex-grow border-t border-slate-200" />
                 </div>
               </>
+            )}
+
+            {authCallbackError === "auth_callback_failed" && (
+              <div role="alert" className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                Sign-in could not be completed. Please try again or use email and password.
+              </div>
+            )}
+
+            {passwordResetSuccess && (
+              <div role="status" className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+                Your password was updated. You can sign in now.
+              </div>
             )}
 
             {suspensionError?.isSuspended && (

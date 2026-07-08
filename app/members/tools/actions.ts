@@ -2,8 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { createServerClient } from "@supabase/ssr"
+import { getAccessibleToolIdsForUser, isToolAvailableForUser } from "@/lib/tools/check-tool-access"
 
-// Service role client for bypassing RLS when needed
 function createServiceRoleClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     cookies: {
@@ -34,12 +34,10 @@ export async function getMemberTools(): Promise<MemberTool[]> {
       data: { user },
     } = await userClient.auth.getUser()
 
-    // If no user, return empty list
     if (!user) return []
 
     const adminClient = createServiceRoleClient()
 
-    // Fetch all active tools ordered by created_at ascending
     const { data: tools, error: toolsError } = await adminClient
       .from("tools")
       .select("id, name, slug, short_description, full_description, image_url, launch_url, plan_only")
@@ -55,39 +53,16 @@ export async function getMemberTools(): Promise<MemberTool[]> {
       return []
     }
 
-    // Get user's plan_id from profile
-    const { data: profile } = await adminClient.from("profiles").select("plan_id").eq("id", user.id).single()
+    const accessibleToolIds = await getAccessibleToolIdsForUser(user.id)
 
-    // Default to empty set if no plan
-    let accessibleToolIds = new Set<string>()
-
-    if (profile?.plan_id) {
-      // Fetch tool access entries for user's plan from tool_plan_access table
-      const { data: toolAccess } = await adminClient
-        .from("tool_plan_access")
-        .select("tool_id")
-        .eq("plan_id", profile.plan_id)
-
-      // Build lookup set of accessible tool IDs
-      if (toolAccess && toolAccess.length > 0) {
-        accessibleToolIds = new Set(toolAccess.map((row) => row.tool_id))
-      }
-    }
-
-    // Filter tools by plan_only visibility: plan_only=true means only show if user has access
     const filteredTools = tools.filter((tool) => {
-      const hasAccess = accessibleToolIds.has(tool.id)
-
-      // If tool is restricted visibility
+      const hasAccess = isToolAvailableForUser(accessibleToolIds, tool.id)
       if (tool.plan_only) {
         return hasAccess
       }
-
-      // Otherwise show to everyone
       return true
     })
 
-    // Map tools to UI-ready format with isAvailable computed per-tool
     return filteredTools.map((tool) => ({
       id: tool.id,
       name: tool.name,
@@ -96,7 +71,7 @@ export async function getMemberTools(): Promise<MemberTool[]> {
       full_description: tool.full_description,
       image_url: tool.image_url,
       launch_url: tool.launch_url,
-      isAvailable: accessibleToolIds.has(tool.id),
+      isAvailable: isToolAvailableForUser(accessibleToolIds, tool.id),
     }))
   } catch (error) {
     console.error("[getMemberTools] Unexpected error:", error)

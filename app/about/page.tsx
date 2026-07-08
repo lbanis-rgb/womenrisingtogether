@@ -1,5 +1,6 @@
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/server"
+import { CookiePreferencesLink } from "@/components/cookies/CookiePreferencesLink"
 import { getAboutPage } from "./actions"
 import OffersSection, { type OffersContent } from "./OffersSection"
 import TeamSection, { type TeamContent } from "./TeamSection"
@@ -23,6 +24,7 @@ async function Footer() {
         <div className="flex gap-6">
           <a href="/terms" className="hover:underline">Terms</a>
           <a href="/privacy" className="hover:underline">Privacy</a>
+          <CookiePreferencesLink className="hover:underline" />
         </div>
       </div>
     </footer>

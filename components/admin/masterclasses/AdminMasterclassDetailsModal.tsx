@@ -1,9 +1,12 @@
 "use client"
 
-import { format } from "date-fns"
 import Image from "next/image"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  formatMasterclassDate,
+  formatMasterclassDualTimezone,
+} from "@/lib/masterclasses/format-masterclass-time"
 import type { MasterclassRow } from "./MasterclassTable"
 
 function getInitials(name: string): string {
@@ -23,23 +26,6 @@ function getEmbedUrl(url: string): string | null {
   const vimeoMatch = u.match(/vimeo\.com\/(\d+)/)
   if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`
   return null
-}
-
-const formatDualTimezone = (dateString: string) => {
-  const date = new Date(dateString)
-  const pst = date.toLocaleString("en-US", {
-    timeZone: "America/Los_Angeles",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-  const est = date.toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-  return `${pst} PST / ${est} EST`
 }
 
 type Props = {
@@ -97,12 +83,12 @@ export default function AdminMasterclassDetailsModal({ masterclass, open, onClos
                   <div>
                     <p className="font-medium text-gray-900">{masterclass.hostName}</p>
                     {masterclass.scheduledAt ? (
-                      <div className="text-sm text-gray-500 mt-1">
+                      <div className="text-sm text-gray-500 mt-1 break-words">
                         <span className="font-semibold text-gray-900">
-                          {format(new Date(masterclass.scheduledAt), "EEE, MMM d")}
+                          {formatMasterclassDate(masterclass.scheduledAt)}
                         </span>
                         {" · "}
-                        {formatDualTimezone(masterclass.scheduledAt)}
+                        {formatMasterclassDualTimezone(masterclass.scheduledAt)}
                         {masterclass.durationFormatted ? ` · ${masterclass.durationFormatted}` : ""}
                       </div>
                     ) : (
